@@ -1,1 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HPLC Color Monitor</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #0d1117;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    h1 { color: #58a6ff; }
+    #colorBox {
+      width: 150px;
+      height: 150px;
+      border-radius: 12px;
+      margin: 10px;
+      border: 2px solid white;
+    }
+    button {
+      background: #58a6ff;
+      border: none;
+      padding: 10px 20px;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #1f6feb;
+    }
+    canvas {
+      max-width: 600px;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h1>HPLC Color Monitor</h1>
+  <div id="colorBox"></div>
+  <p id="colorInfo">RGB: (0, 0, 0) | HEX: #000000</p>
+  <button id="resetBtn">Reset Graph</button>
+  <canvas id="colorChart"></canvas>
+
+  <script>
+    const socket = io();
+    const ctx = document.getElementById("colorChart").getContext("2d");
+    const maxDataPoints = 50;
+    const data = {
+      labels: [],
+      datasets: [
+        { label: "Red", borderColor: "red", fill: true, data: [] },
+        { label: "Green", borderColor: "lime", fill: true, data: [] },
+        { label: "Blue", borderColor: "cyan", fill: true, data: [] },
+        { label: "Yellow", borderColor: "yellow", fill: true, data: [] },
+      ]
+    };
+
+    const chart = new Chart(ctx, {
+      type: "line",
+      data,
+      options: {
+        animation: false,
+        scales: {
+          x: { title: { display: true, text: "Time" } },
+          y: { title: { display: true, text: "Intensity" }, min: 0, max: 1023 }
+        }
+      }
+    });
+
+    socket.on("colorUpdate", (color) => {
+      const { r, g, b, y } = color;
+      const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+      document.getElementById("colorBox").style.backgroundColor = hex;
+      document.getElementById("colorInfo").textContent =
+        `RGB: (${r}, ${g}, ${b}) | HEX: ${hex}`;
+      
+      const timeLabel = new Date().toLocaleTimeString();
+      data.labels.push(timeLabel);
+      data.datasets[0].data.push(r);
+      data.datasets[1].data.push(g);
+      data.datasets[2].data.push(b);
+      data.datasets[3].data.push(y);
+
+      if (data.labels.length > maxDataPoints) {
+        data.labels.shift();
+        data.datasets.forEach(ds => ds.data.shift());
+      }
+      chart.update();
+    });
+
+    socket.on("resetGraph", () => {
+      data.labels = [];
+      data.datasets.forEach(ds => ds.data = []);
+      chart.update();
+    });
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      socket.emit("resetData");
+    });
+  </script>
+</body>
+</html>
 
