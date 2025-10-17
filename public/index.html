@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <title>Color Sensor Simulation</title>
+  <title>Real-time Color Sensor</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
@@ -13,22 +13,15 @@
       padding: 20px;
       margin: 0;
     }
-    .color-boxes {
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 20px;
-      margin-bottom: 20px;
-    }
     .color-box {
-      width: 100px;
-      height: 100px;
+      width: 150px;
+      height: 150px;
       border-radius: 8px;
+      margin: 20px auto 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-direction: column;
-      font-size: 14px;
+      font-size: 16px;
       font-weight: bold;
       color: #000;
     }
@@ -49,16 +42,11 @@
   </style>
 </head>
 <body>
-  <h1>🎨 Color Sensor Simulation</h1>
+  <h1>🎨 Real-time Color Sensor</h1>
 
   <button onclick="resetData()">🔄 Reset</button>
 
-  <div class="color-boxes">
-    <div class="color-box" id="redBox">#000000</div>
-    <div class="color-box" id="greenBox">#000000</div>
-    <div class="color-box" id="blueBox">#000000</div>
-    <div class="color-box" id="yellowBox">#000000</div>
-  </div>
+  <div class="color-box" id="colorBox">#000000</div>
 
   <canvas id="chart"></canvas>
 
@@ -66,30 +54,17 @@
     let chart;
     let startTime = Date.now();
 
-    function mountain(t, start, end, peak, noise=5) {
-      if (t < start || t > end) return 0;
-      let mid = (start + end) / 2;
-      let width = (end - start) / 2;
-      let x = (t - mid) / width;
-      let value = peak * Math.exp(-4 * x * x);
-      return value + (Math.random() * noise - noise/2);
-    }
-
-    function flatLine(max=100) {
-      return max * 0.5 + (Math.random() * 20 - 10);
-    }
-
     function setupChart() {
       const ctx = document.getElementById('chart').getContext('2d');
       chart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: [0],
+          labels: [],
           datasets: [
-            { label: 'Red', borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.3)', data: [flatLine()], fill: true },
-            { label: 'Green', borderColor: 'lime', backgroundColor: 'rgba(0,255,0,0.3)', data: [flatLine()], fill: true },
-            { label: 'Blue', borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.3)', data: [flatLine()], fill: true },
-            { label: 'Yellow', borderColor: 'yellow', backgroundColor: 'rgba(255,255,0,0.3)', data: [0], fill: true }
+            { label: 'Red', borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.3)', data: [], fill: true },
+            { label: 'Green', borderColor: 'lime', backgroundColor: 'rgba(0,255,0,0.3)', data: [], fill: true },
+            { label: 'Blue', borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.3)', data: [], fill: true },
+            { label: 'Yellow', borderColor: 'yellow', backgroundColor: 'rgba(255,255,0,0.3)', data: [], fill: true }
           ]
         },
         options: {
@@ -103,28 +78,14 @@
       });
     }
 
-    function updateColorBoxes(r, g, b, y) {
-      document.getElementById('redBox').style.backgroundColor = `rgb(${r},0,0)`;
-      document.getElementById('redBox').textContent = `#${r.toString(16).padStart(2,'0')}0000`;
-
-      document.getElementById('greenBox').style.backgroundColor = `rgb(0,${g},0)`;
-      document.getElementById('greenBox').textContent = `#00${g.toString(16).padStart(2,'0')}00`;
-
-      document.getElementById('blueBox').style.backgroundColor = `rgb(0,0,${b})`;
-      document.getElementById('blueBox').textContent = `#0000${b.toString(16).padStart(2,'0')}`;
-
-      document.getElementById('yellowBox').style.backgroundColor = `rgb(${y},${y},0)`;
-      document.getElementById('yellowBox').textContent = `#${y.toString(16).padStart(2,'0')}${y.toString(16).padStart(2,'0')}00`;
+    function updateColorBox(r, g, b, y) {
+      let hex = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+      document.getElementById('colorBox').style.backgroundColor = `rgb(${r},${g},${b})`;
+      document.getElementById('colorBox').textContent = hex;
     }
 
-    function updateChart() {
+    function addData(r, g, b, y) {
       let t = Math.floor((Date.now() - startTime) / 1000);
-
-      let r = flatLine();
-      let g = mountain(t, 10, 50, 180);
-      let b = flatLine();
-      let y = mountain(t, 20, 60, 200);
-
       chart.data.labels.push(t);
       chart.data.datasets[0].data.push(r);
       chart.data.datasets[1].data.push(g);
@@ -136,21 +97,33 @@
         chart.data.datasets.forEach(ds => ds.data.shift());
       }
 
-      updateColorBoxes(Math.floor(r), Math.floor(g), Math.floor(b), Math.floor(y));
-
+      updateColorBox(r, g, b, y);
       chart.update();
     }
 
     function resetData() {
       startTime = Date.now();
-      chart.data.labels = [0];
-      chart.data.datasets.forEach(ds => ds.data = [0]);
+      chart.data.labels = [];
+      chart.data.datasets.forEach(ds => ds.data = []);
       chart.update();
+      document.getElementById('colorBox').style.backgroundColor = '#000000';
+      document.getElementById('colorBox').textContent = '#000000';
     }
 
     window.onload = function() {
       setupChart();
-      setInterval(updateChart, 1000);
+
+      // เชื่อม WebSocket ไปที่ server ของคุณ
+      const ws = new WebSocket("ws://YOUR_SERVER_ADDRESS:PORT"); // เปลี่ยนเป็น server ของคุณ
+
+      ws.onmessage = function(event) {
+        // server ส่งข้อมูล JSON: {r: int, g: int, b: int, y: int}
+        let data = JSON.parse(event.data);
+        addData(data.r, data.g, data.b, data.y);
+      };
+
+      ws.onopen = () => console.log("Connected to sensor server");
+      ws.onclose = () => console.log("Disconnected from sensor server");
     };
   </script>
 </body>
