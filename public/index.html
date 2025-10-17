@@ -1,111 +1,157 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HPLC Color Monitor</title>
-  <script src="/socket.io/socket.io.js"></script>
+  <title>Color Sensor Simulation</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      font-family: sans-serif;
-      background: #0d1117;
-      color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      font-family: Arial, sans-serif;
+      background-color: #111;
+      color: #fff;
+      text-align: center;
       padding: 20px;
+      margin: 0;
     }
-    h1 { color: #58a6ff; }
-    #colorBox {
-      width: 150px;
-      height: 150px;
-      border-radius: 12px;
-      margin: 10px;
-      border: 2px solid white;
+    .color-boxes {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 20px;
     }
-    button {
-      background: #58a6ff;
-      border: none;
-      padding: 10px 20px;
-      color: white;
+    .color-box {
+      width: 100px;
+      height: 100px;
       border-radius: 8px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
-    button:hover {
-      background: #1f6feb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      font-size: 14px;
+      font-weight: bold;
+      color: #000;
     }
     canvas {
-      max-width: 600px;
-      margin-top: 30px;
+      background-color: #222;
+      border-radius: 8px;
+      max-width: 100%;
+      height: 350px;
+    }
+    button {
+      margin-bottom: 20px;
+      padding: 8px 16px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>HPLC Color Monitor</h1>
-  <div id="colorBox"></div>
-  <p id="colorInfo">RGB: (0, 0, 0) | HEX: #000000</p>
-  <button id="resetBtn">Reset Graph</button>
-  <canvas id="colorChart"></canvas>
+  <h1>🎨 Color Sensor Simulation</h1>
+
+  <button onclick="resetData()">🔄 Reset</button>
+
+  <div class="color-boxes">
+    <div class="color-box" id="redBox">#000000</div>
+    <div class="color-box" id="greenBox">#000000</div>
+    <div class="color-box" id="blueBox">#000000</div>
+    <div class="color-box" id="yellowBox">#000000</div>
+  </div>
+
+  <canvas id="chart"></canvas>
 
   <script>
-    const socket = io();
-    const ctx = document.getElementById("colorChart").getContext("2d");
-    const maxDataPoints = 50;
-    const data = {
-      labels: [],
-      datasets: [
-        { label: "Red", borderColor: "red", fill: true, data: [] },
-        { label: "Green", borderColor: "lime", fill: true, data: [] },
-        { label: "Blue", borderColor: "cyan", fill: true, data: [] },
-        { label: "Yellow", borderColor: "yellow", fill: true, data: [] },
-      ]
-    };
+    let chart;
+    let startTime = Date.now();
 
-    const chart = new Chart(ctx, {
-      type: "line",
-      data,
-      options: {
-        animation: false,
-        scales: {
-          x: { title: { display: true, text: "Time" } },
-          y: { title: { display: true, text: "Intensity" }, min: 0, max: 1023 }
+    function mountain(t, start, end, peak, noise=5) {
+      if (t < start || t > end) return 0;
+      let mid = (start + end) / 2;
+      let width = (end - start) / 2;
+      let x = (t - mid) / width;
+      let value = peak * Math.exp(-4 * x * x);
+      return value + (Math.random() * noise - noise/2);
+    }
+
+    function flatLine(max=100) {
+      return max * 0.5 + (Math.random() * 20 - 10);
+    }
+
+    function setupChart() {
+      const ctx = document.getElementById('chart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [0],
+          datasets: [
+            { label: 'Red', borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.3)', data: [flatLine()], fill: true },
+            { label: 'Green', borderColor: 'lime', backgroundColor: 'rgba(0,255,0,0.3)', data: [flatLine()], fill: true },
+            { label: 'Blue', borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.3)', data: [flatLine()], fill: true },
+            { label: 'Yellow', borderColor: 'yellow', backgroundColor: 'rgba(255,255,0,0.3)', data: [0], fill: true }
+          ]
+        },
+        options: {
+          animation: false,
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true, max: 255 },
+            x: { title: { display: true, text: "Time (s)" } }
+          }
         }
+      });
+    }
+
+    function updateColorBoxes(r, g, b, y) {
+      document.getElementById('redBox').style.backgroundColor = `rgb(${r},0,0)`;
+      document.getElementById('redBox').textContent = `#${r.toString(16).padStart(2,'0')}0000`;
+
+      document.getElementById('greenBox').style.backgroundColor = `rgb(0,${g},0)`;
+      document.getElementById('greenBox').textContent = `#00${g.toString(16).padStart(2,'0')}00`;
+
+      document.getElementById('blueBox').style.backgroundColor = `rgb(0,0,${b})`;
+      document.getElementById('blueBox').textContent = `#0000${b.toString(16).padStart(2,'0')}`;
+
+      document.getElementById('yellowBox').style.backgroundColor = `rgb(${y},${y},0)`;
+      document.getElementById('yellowBox').textContent = `#${y.toString(16).padStart(2,'0')}${y.toString(16).padStart(2,'0')}00`;
+    }
+
+    function updateChart() {
+      let t = Math.floor((Date.now() - startTime) / 1000);
+
+      let r = flatLine();
+      let g = mountain(t, 10, 50, 180);
+      let b = flatLine();
+      let y = mountain(t, 20, 60, 200);
+
+      chart.data.labels.push(t);
+      chart.data.datasets[0].data.push(r);
+      chart.data.datasets[1].data.push(g);
+      chart.data.datasets[2].data.push(b);
+      chart.data.datasets[3].data.push(y);
+
+      if (chart.data.labels.length > 100) {
+        chart.data.labels.shift();
+        chart.data.datasets.forEach(ds => ds.data.shift());
       }
-    });
 
-    socket.on("colorUpdate", (color) => {
-      const { r, g, b, y } = color;
-      const hex = `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-      document.getElementById("colorBox").style.backgroundColor = hex;
-      document.getElementById("colorInfo").textContent =
-        `RGB: (${r}, ${g}, ${b}) | HEX: ${hex}`;
-      
-      const timeLabel = new Date().toLocaleTimeString();
-      data.labels.push(timeLabel);
-      data.datasets[0].data.push(r);
-      data.datasets[1].data.push(g);
-      data.datasets[2].data.push(b);
-      data.datasets[3].data.push(y);
+      updateColorBoxes(Math.floor(r), Math.floor(g), Math.floor(b), Math.floor(y));
 
-      if (data.labels.length > maxDataPoints) {
-        data.labels.shift();
-        data.datasets.forEach(ds => ds.data.shift());
-      }
       chart.update();
-    });
+    }
 
-    socket.on("resetGraph", () => {
-      data.labels = [];
-      data.datasets.forEach(ds => ds.data = []);
+    function resetData() {
+      startTime = Date.now();
+      chart.data.labels = [0];
+      chart.data.datasets.forEach(ds => ds.data = [0]);
       chart.update();
-    });
+    }
 
-    document.getElementById("resetBtn").addEventListener("click", () => {
-      socket.emit("resetData");
-    });
+    window.onload = function() {
+      setupChart();
+      setInterval(updateChart, 1000);
+    };
   </script>
 </body>
 </html>
-
