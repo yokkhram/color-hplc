@@ -1,41 +1,42 @@
-const express = require("express");
-const http = require("http");
-const { Server } = require("socket.io");
+// server.js
+import express from "express";
+import { WebSocketServer } from "ws";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
-
-app.use(express.static("public"));
-
-let colorData = { r: 0, g: 0, b: 0, y: 0 };
-
-// รับข้อมูลจาก ESP8266 (ตัวอย่าง: /update?r=100&g=150&b=200&y=180)
-app.get("/update", (req, res) => {
-  const { r, g, b, y } = req.query;
-  if (r && g && b && y) {
-    colorData = {
-      r: Number(r),
-      g: Number(g),
-      b: Number(b),
-      y: Number(y)
-    };
-    io.emit("colorUpdate", colorData);
-    console.log("Updated color:", colorData);
-    res.send("OK");
-  } else {
-    res.send("Missing parameters");
-  }
-});
-
-io.on("connection", (socket) => {
-  console.log("Client connected");
-  socket.emit("colorUpdate", colorData);
-
-  socket.on("resetData", () => {
-    io.emit("resetGraph");
-  });
-});
-
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// ให้บริการหน้าเว็บ index.html
+app.use(express.static(__dirname));
+
+// สร้าง HTTP server
+const server = app.listen(PORT, () => {
+  console.log(`🌐 Server running on port ${PORT}`);
+});
+
+// สร้าง WebSocket server
+const wss = new WebSocketServer({ server });
+
+wss.on("connection", (ws) => {
+  console.log("✅ Client connected");
+
+  ws.on("message", (message) => {
+    try {
+      const data = JSON.parse(message);
+      // ส่งต่อข้อมูลให้ client อื่น ๆ (หน้าเว็บ)
+      wss.clients.forEach(client => {
+        if (client.readyState === ws.OPEN) {
+          client.send(JSON.stringify(data));
+        }
+      });
+    } catch (err) {
+      console.error("❌ Invalid data received:", message);
+    }
+  });
+
+  ws.on("close", () => console.log("❌ Client disconnected"));
+});
