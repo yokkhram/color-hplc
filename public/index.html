@@ -2,9 +2,9 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Real-time Color Sensor</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -12,101 +12,87 @@
       color: #fff;
       text-align: center;
       margin: 0;
-      padding: 0;
-    }
-
-    header {
-      padding: 15px;
-      background: #1a1a1a;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.4);
-    }
-
-    h1 {
-      margin: 10px 0;
-      font-size: 1.5rem;
-    }
-
-    button {
-      margin-top: 10px;
-      padding: 10px 18px;
-      font-size: 1rem;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      background-color: #007bff;
-      color: white;
-      transition: background-color 0.2s;
-    }
-
-    button:hover {
-      background-color: #0056b3;
-    }
-
-    main {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
       padding: 20px;
     }
 
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 15px;
+    }
+
+    button {
+      margin-bottom: 15px;
+      padding: 8px 16px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: none;
+      cursor: pointer;
+      background-color: #444;
+      color: white;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background-color: #666;
+    }
+
+    .color-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
     .color-box {
-      width: 120px;
-      height: 120px;
-      border-radius: 10px;
-      margin: 15px auto;
+      width: 150px;
+      height: 150px;
+      border-radius: 8px;
+      border: 2px solid #555;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: bold;
-      font-size: 1rem;
-      color: #000;
-      transition: background-color 0.3s;
-      box-shadow: 0 0 10px rgba(255,255,255,0.2);
+      margin-bottom: 8px;
+      background-color: #000;
     }
 
-    .chart-container {
-      width: 90%;
-      max-width: 700px;
-      background: #1a1a1a;
-      padding: 15px;
-      border-radius: 12px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    .color-code {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #ffcc00;
+      letter-spacing: 1px;
     }
 
     canvas {
+      background-color: #222;
+      border-radius: 8px;
       width: 100%;
+      max-width: 700px;
       height: 300px;
-      border-radius: 10px;
+      margin: 0 auto;
     }
 
-    /* สำหรับมือถือ */
     @media (max-width: 600px) {
-      h1 {
-        font-size: 1.2rem;
-      }
       .color-box {
-        width: 100px;
-        height: 100px;
-        font-size: 0.9rem;
+        width: 120px;
+        height: 120px;
       }
       canvas {
-        height: 250px;
+        height: 220px;
       }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>🎨 Real-time Color Sensor</h1>
-    <button onclick="resetData()">🔄 รีเซ็ตข้อมูล</button>
-  </header>
+  <h1>🎨 Real-time Color Sensor</h1>
 
-  <main>
-    <div class="color-box" id="colorBox">#000000</div>
-    <div class="chart-container">
-      <canvas id="chart"></canvas>
-    </div>
-  </main>
+  <button onclick="resetData()">🔄 Reset</button>
+
+  <div class="color-container">
+    <div class="color-box" id="colorBox"></div>
+    <div class="color-code" id="colorCode">#000000</div>
+  </div>
+
+  <canvas id="chart"></canvas>
 
   <script>
     let chart;
@@ -119,19 +105,18 @@
         data: {
           labels: [],
           datasets: [
-            { label: 'Red', borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.3)', data: [], fill: true, tension: 0.3 },
-            { label: 'Green', borderColor: 'lime', backgroundColor: 'rgba(0,255,0,0.3)', data: [], fill: true, tension: 0.3 },
-            { label: 'Blue', borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.3)', data: [], fill: true, tension: 0.3 },
-            { label: 'Yellow', borderColor: 'yellow', backgroundColor: 'rgba(255,255,0,0.3)', data: [], fill: true, tension: 0.3 }
+            { label: 'Red', borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.3)', data: [], fill: true },
+            { label: 'Green', borderColor: 'lime', backgroundColor: 'rgba(0,255,0,0.3)', data: [], fill: true },
+            { label: 'Blue', borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.3)', data: [], fill: true },
+            { label: 'Yellow', borderColor: 'yellow', backgroundColor: 'rgba(255,255,0,0.3)', data: [], fill: true }
           ]
         },
         options: {
           animation: false,
           responsive: true,
-          maintainAspectRatio: false,
           scales: {
-            y: { beginAtZero: true, max: 255, title: { display: true, text: "ความเข้มสี" } },
-            x: { title: { display: true, text: "เวลา (วินาที)" } }
+            y: { beginAtZero: true, max: 255, title: { display: true, text: "Color Intensity" } },
+            x: { title: { display: true, text: "Time (s)" } }
           },
           plugins: {
             legend: { labels: { color: "#fff" } }
@@ -142,9 +127,8 @@
 
     function updateColorBox(r, g, b, y) {
       const hex = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
-      const box = document.getElementById('colorBox');
-      box.style.backgroundColor = `rgb(${r},${g},${b})`;
-      box.textContent = hex.toUpperCase();
+      document.getElementById('colorBox').style.backgroundColor = `rgb(${r},${g},${b})`;
+      document.getElementById('colorCode').textContent = hex.toUpperCase();
     }
 
     function addData(r, g, b, y) {
@@ -169,28 +153,23 @@
       chart.data.labels = [];
       chart.data.datasets.forEach(ds => ds.data = []);
       chart.update();
-      const box = document.getElementById('colorBox');
-      box.style.backgroundColor = '#000000';
-      box.textContent = '#000000';
+      document.getElementById('colorBox').style.backgroundColor = '#000000';
+      document.getElementById('colorCode').textContent = '#000000';
     }
 
     window.onload = function() {
       setupChart();
 
-      // ⚙️ เปลี่ยนเป็น WebSocket ของคุณ
-      const ws = new WebSocket("ws://YOUR_SERVER_ADDRESS:PORT");
+      // 🔗 เชื่อม WebSocket ไปที่ server (แก้เป็นของจริงก่อนใช้)
+      const ws = new WebSocket("wss://YOUR-RENDER-URL.onrender.com");
 
       ws.onmessage = function(event) {
-        try {
-          const data = JSON.parse(event.data);
-          addData(data.r, data.g, data.b, data.y);
-        } catch (e) {
-          console.error("Invalid data:", event.data);
-        }
+        const data = JSON.parse(event.data);
+        addData(data.r, data.g, data.b, data.y);
       };
 
-      ws.onopen = () => console.log("✅ Connected to sensor server");
-      ws.onclose = () => console.log("❌ Disconnected from sensor server");
+      ws.onopen = () => console.log("Connected to server");
+      ws.onclose = () => console.log("Disconnected from server");
     };
   </script>
 </body>
