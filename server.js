@@ -10,15 +10,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// ให้บริการหน้าเว็บ index.html
-app.use(express.static(__dirname));
+// ถ้า index.html อยู่ใน public/
+app.use(express.static(path.join(__dirname, "public")));
 
-// สร้าง HTTP server
+// ถ้า index.html อยู่ข้างนอก (ไม่มีโฟลเดอร์ public) → ใช้บรรทัดนี้แทน
+// app.use(express.static(__dirname));
+
 const server = app.listen(PORT, () => {
   console.log(`🌐 Server running on port ${PORT}`);
 });
 
-// สร้าง WebSocket server
 const wss = new WebSocketServer({ server });
 
 wss.on("connection", (ws) => {
@@ -27,14 +28,13 @@ wss.on("connection", (ws) => {
   ws.on("message", (message) => {
     try {
       const data = JSON.parse(message);
-      // ส่งต่อข้อมูลให้ client อื่น ๆ (หน้าเว็บ)
-      wss.clients.forEach(client => {
+      wss.clients.forEach((client) => {
         if (client.readyState === ws.OPEN) {
           client.send(JSON.stringify(data));
         }
       });
     } catch (err) {
-      console.error("❌ Invalid data received:", message);
+      console.error("❌ Invalid data:", message);
     }
   });
 
