@@ -2,24 +2,42 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <title>Real-time Color Sensor</title>
+  <title>🎨 Real-time Color HPLC</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       font-family: Arial, sans-serif;
       background-color: #111;
       color: #fff;
       text-align: center;
-      margin: 0;
       padding: 20px;
+      margin: 0;
     }
-
-    h1 {
-      font-size: 1.6rem;
+    .color-box {
+      width: 140px;
+      height: 140px;
+      border-radius: 8px;
+      margin: 10px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: bold;
+      color: #000;
+      border: 2px solid #fff;
+    }
+    .hex-label {
+      font-size: 18px;
+      color: #0ff;
       margin-bottom: 15px;
     }
-
+    canvas {
+      background-color: #222;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 600px;
+      height: 300px;
+    }
     button {
       margin-bottom: 15px;
       padding: 8px 16px;
@@ -27,55 +45,11 @@
       border-radius: 5px;
       border: none;
       cursor: pointer;
-      background-color: #444;
-      color: white;
-      transition: background 0.2s;
-    }
-
-    button:hover {
-      background-color: #666;
-    }
-
-    .color-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-
-    .color-box {
-      width: 150px;
-      height: 150px;
-      border-radius: 8px;
-      border: 2px solid #555;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 8px;
-      background-color: #000;
-    }
-
-    .color-code {
-      font-size: 1.1rem;
+      background: #0ff;
+      color: #000;
       font-weight: bold;
-      color: #ffcc00;
-      letter-spacing: 1px;
     }
-
-    canvas {
-      background-color: #222;
-      border-radius: 8px;
-      width: 100%;
-      max-width: 700px;
-      height: 300px;
-      margin: 0 auto;
-    }
-
     @media (max-width: 600px) {
-      .color-box {
-        width: 120px;
-        height: 120px;
-      }
       canvas {
         height: 220px;
       }
@@ -83,14 +57,12 @@
   </style>
 </head>
 <body>
-  <h1>🎨 Real-time Color Sensor</h1>
+  <h1>🧪 Real-time Color HPLC</h1>
 
   <button onclick="resetData()">🔄 Reset</button>
 
-  <div class="color-container">
-    <div class="color-box" id="colorBox"></div>
-    <div class="color-code" id="colorCode">#000000</div>
-  </div>
+  <div class="color-box" id="colorBox"></div>
+  <div class="hex-label" id="hexLabel">#000000</div>
 
   <canvas id="chart"></canvas>
 
@@ -115,24 +87,21 @@
           animation: false,
           responsive: true,
           scales: {
-            y: { beginAtZero: true, max: 255, title: { display: true, text: "Color Intensity" } },
+            y: { beginAtZero: true, max: 255 },
             x: { title: { display: true, text: "Time (s)" } }
-          },
-          plugins: {
-            legend: { labels: { color: "#fff" } }
           }
         }
       });
     }
 
-    function updateColorBox(r, g, b, y) {
-      const hex = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+    function updateColorBox(r, g, b) {
+      let hex = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
       document.getElementById('colorBox').style.backgroundColor = `rgb(${r},${g},${b})`;
-      document.getElementById('colorCode').textContent = hex.toUpperCase();
+      document.getElementById('hexLabel').textContent = hex;
     }
 
     function addData(r, g, b, y) {
-      const t = Math.floor((Date.now() - startTime) / 1000);
+      let t = Math.floor((Date.now() - startTime) / 1000);
       chart.data.labels.push(t);
       chart.data.datasets[0].data.push(r);
       chart.data.datasets[1].data.push(g);
@@ -144,7 +113,7 @@
         chart.data.datasets.forEach(ds => ds.data.shift());
       }
 
-      updateColorBox(r, g, b, y);
+      updateColorBox(r, g, b);
       chart.update();
     }
 
@@ -154,22 +123,21 @@
       chart.data.datasets.forEach(ds => ds.data = []);
       chart.update();
       document.getElementById('colorBox').style.backgroundColor = '#000000';
-      document.getElementById('colorCode').textContent = '#000000';
+      document.getElementById('hexLabel').textContent = '#000000';
     }
 
     window.onload = function() {
       setupChart();
-
-      // 🔗 เชื่อม WebSocket ไปที่ server (แก้เป็นของจริงก่อนใช้)
-      const ws = new WebSocket("wss://YOUR-RENDER-URL.onrender.com");
+      // เชื่อมกับ WebSocket ของ render โดยอัตโนมัติ
+      const ws = new WebSocket(`wss://${window.location.host}`);
 
       ws.onmessage = function(event) {
         const data = JSON.parse(event.data);
-        addData(data.r, data.g, data.b, data.y);
+        addData(data.r, data.g, data.b, data.y || 0);
       };
 
-      ws.onopen = () => console.log("Connected to server");
-      ws.onclose = () => console.log("Disconnected from server");
+      ws.onopen = () => console.log("Connected to WebSocket server ✅");
+      ws.onclose = () => console.log("Disconnected ❌");
     };
   </script>
 </body>
