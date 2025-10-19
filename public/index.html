@@ -2,7 +2,7 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <title>🎨 Real-time Color HPLC</title>
+  <title>🧪 Real-time Color HPLC</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
@@ -60,6 +60,7 @@
   <h1>🧪 Real-time Color HPLC</h1>
 
   <button onclick="resetData()">🔄 Reset</button>
+  <button onclick="calibrateWhite()">📏 Calibrate สีขาว</button>
 
   <div class="color-box" id="colorBox"></div>
   <div class="hex-label" id="hexLabel">#000000</div>
@@ -69,6 +70,7 @@
   <script>
     let chart;
     let startTime = Date.now();
+    let ws;
 
     function setupChart() {
       const ctx = document.getElementById('chart').getContext('2d');
@@ -126,18 +128,26 @@
       document.getElementById('hexLabel').textContent = '#000000';
     }
 
+    function calibrateWhite() {
+      if(ws && ws.readyState === WebSocket.OPEN) {
+        ws.send("calibrate");
+        alert("📏 ส่งคำสั่ง Calibrate สีขาวแล้ว! วางกระดาษขาวไว้บนเซ็นเซอร์");
+      }
+    }
+
     window.onload = function() {
       setupChart();
-      // เชื่อมกับ WebSocket ของ render โดยอัตโนมัติ
-      const ws = new WebSocket(`wss://${window.location.host}`);
+
+      // เชื่อม WebSocket อัตโนมัติกับ Render
+      ws = new WebSocket(`wss://${window.location.host}`);
+
+      ws.onopen = () => console.log("Connected to WebSocket server ✅");
+      ws.onclose = () => console.log("Disconnected ❌");
 
       ws.onmessage = function(event) {
         const data = JSON.parse(event.data);
         addData(data.r, data.g, data.b, data.y || 0);
       };
-
-      ws.onopen = () => console.log("Connected to WebSocket server ✅");
-      ws.onclose = () => console.log("Disconnected ❌");
     };
   </script>
 </body>
