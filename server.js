@@ -1,42 +1,50 @@
-// server.js
+// ====== server.js ======
 import express from "express";
 import { WebSocketServer } from "ws";
+import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
+
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+// เสิร์ฟหน้าเว็บ
+app.use(express.static(path.join(__dirname, "public"))); // โฟลเดอร์เว็บ HTML
 
-// ถ้า index.html อยู่ใน public/
-app.use(express.static(path.join(__dirname, "public")));
+let latestData = null;
 
-// ถ้า index.html อยู่ข้างนอก (ไม่มีโฟลเดอร์ public) → ใช้บรรทัดนี้แทน
-// app.use(express.static(__dirname));
+// เมื่อ NodeMCU เชื่อมต่อเข้ามา
+wss.on("connection", (ws, req) => {
+  console.log("🔌 WebSocket connected:", req.socket.remoteAddress);
 
-const server = app.listen(PORT, () => {
-  console.log(`🌐 Server running on port ${PORT}`);
-});
-
-const wss = new WebSocketServer({ server });
-
-wss.on("connection", (ws) => {
-  console.log("✅ Client connected");
-
-  ws.on("message", (message) => {
+  ws.on("message", (msg) => {
     try {
-      const data = JSON.parse(message);
+      const data = JSON.parse(msg.toString());
+      latestData = data;
+      // 🔁 กระจายข้อมูลให้ทุก client ที่เป็นหน้าเว็บ
       wss.clients.forEach((client) => {
         if (client.readyState === ws.OPEN) {
           client.send(JSON.stringify(data));
         }
       });
+      console.log("📦 Received:", data);
     } catch (err) {
-      console.error("❌ Invalid data:", message);
+      console.error("❌ Error parsing message:", err);
     }
   });
 
-  ws.on("close", () => console.log("❌ Client disconnected"));
+  ws.on("close", () => console.log("❎ Disconnected"));
 });
+
+// ถ้าเข้าหน้าเว็บหลัก
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Start Server
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
