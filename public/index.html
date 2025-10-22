@@ -2,131 +2,165 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🎨 Real-time Color Sensor</title>
+  <title>Real-time Color Sensor</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      margin: 0;
-      padding: 0;
-      font-family: "Segoe UI", sans-serif;
-      background-color: #0d1117;
+      font-family: Arial, sans-serif;
+      background-color: #111;
       color: #fff;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+
+    .container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      height: 100vh;
-      overflow: hidden;
+      justify-content: center;
+      max-width: 100%;
+      margin: 0 auto;
     }
-
-    h1 { margin-top: 8px; font-size: 1.3rem; }
 
     .color-box {
-      width: 220px;
-      height: 80px;
-      border-radius: 10px;
-      border: 2px solid #444;
-      transition: background 0.3s ease;
+      width: 120px;
+      height: 120px;
+      border-radius: 8px;
+      margin: 10px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: bold;
+      color: #000;
     }
 
-    .hex-code { margin: 6px 0; color: #aaa; }
+    #colorHex {
+      margin-top: 5px;
+      font-size: 14px;
+      color: #fff;
+    }
 
     canvas {
-      width: 85%;
+      background-color: #222;
+      border-radius: 8px;
+      width: 90%;
       max-width: 600px;
-      height: 45%;
-      border-radius: 10px;
-      background-color: #161b22;
+      height: 300px;
     }
 
     button {
-      background-color: #238636;
+      margin-bottom: 20px;
+      padding: 8px 16px;
+      font-size: 16px;
+      border-radius: 5px;
       border: none;
-      color: white;
-      border-radius: 8px;
-      padding: 10px 20px;
-      margin-bottom: 10px;
       cursor: pointer;
     }
 
-    button:hover { background-color: #2ea043; }
+    @media (max-width: 480px) {
+      canvas {
+        height: 200px;
+      }
+      .color-box {
+        width: 100px;
+        height: 100px;
+        font-size: 14px;
+      }
+    }
   </style>
 </head>
-
 <body>
   <h1>🎨 Real-time Color Sensor</h1>
 
-  <div class="color-box" id="colorBox"></div>
-  <div class="hex-code" id="hexText">#000000</div>
+  <button onclick="resetData()">🔄 Reset</button>
+  <button onclick="calibrateWhite()">📏 Calibrate White</button>
 
-  <canvas id="chart"></canvas>
-  <button onclick="resetChart()">🔄 Reset</button>
+  <div class="container">
+    <div class="color-box" id="colorBox">#000000</div>
+    <div id="colorHex">#000000</div>
+    <canvas id="chart"></canvas>
+  </div>
 
   <script>
-    const ctx = document.getElementById("chart").getContext("2d");
-    const chart = new Chart(ctx, {
-      type: "line",
-      data: {
-        labels: [],
-        datasets: [
-          { label: "Red", borderColor: "red", data: [] },
-          { label: "Green", borderColor: "lime", data: [] },
-          { label: "Blue", borderColor: "blue", data: [] },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        animation: false,
-        scales: {
-          y: { beginAtZero: true, max: 255, ticks: { color: "#aaa" }, grid: { color: "#333" } },
-          x: { ticks: { color: "#aaa" }, grid: { color: "#333" } },
-        },
-        plugins: { legend: { labels: { color: "#fff" } } },
-      },
-    });
+    let chart;
+    let startTime = Date.now();
 
-    function updateUI(r, g, b, hex) {
-      const box = document.getElementById("colorBox");
-      const text = document.getElementById("hexText");
-      box.style.backgroundColor = `rgb(${r},${g},${b})`;
-      text.textContent = hex;
+    function setupChart() {
+      const ctx = document.getElementById('chart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            { label: 'Red', borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.3)', data: [], fill: true },
+            { label: 'Green', borderColor: 'lime', backgroundColor: 'rgba(0,255,0,0.3)', data: [], fill: true },
+            { label: 'Blue', borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.3)', data: [], fill: true }
+          ]
+        },
+        options: {
+          animation: false,
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: { beginAtZero: true, max: 255 },
+            x: { title: { display: true, text: "Time (s)" } }
+          }
+        }
+      });
+    }
+
+    function updateColorBox(r, g, b) {
+      let hex = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+      document.getElementById('colorBox').style.backgroundColor = `rgb(${r},${g},${b})`;
+      document.getElementById('colorHex').textContent = hex;
     }
 
     function addData(r, g, b) {
-      const t = new Date().toLocaleTimeString();
+      let t = Math.floor((Date.now() - startTime) / 1000);
       chart.data.labels.push(t);
       chart.data.datasets[0].data.push(r);
       chart.data.datasets[1].data.push(g);
       chart.data.datasets[2].data.push(b);
 
-      if (chart.data.labels.length > 30) {
+      if (chart.data.labels.length > 100) {
         chart.data.labels.shift();
         chart.data.datasets.forEach(ds => ds.data.shift());
       }
+
+      updateColorBox(r, g, b);
       chart.update();
     }
 
-    async function fetchData() {
-      try {
-        const res = await fetch("https://color-hplc.onrender.com/latest");
-        const data = await res.json();
-        addData(data.r, data.g, data.b);
-        updateUI(data.r, data.g, data.b, data.hex);
-      } catch (err) {
-        console.log("⚠️ Fetch error:", err);
-      }
-    }
-
-    function resetChart() {
+    function resetData() {
+      startTime = Date.now();
       chart.data.labels = [];
       chart.data.datasets.forEach(ds => ds.data = []);
       chart.update();
-      updateUI(0, 0, 0, "#000000");
+      document.getElementById('colorBox').style.backgroundColor = '#000000';
+      document.getElementById('colorHex').textContent = '#000000';
     }
 
-    setInterval(fetchData, 1000);
+    function calibrateWhite() {
+      if(ws.readyState === WebSocket.OPEN) {
+        ws.send("calibrate");
+        alert("ส่งคำสั่ง Calibrate ไปยัง NodeMCU แล้ว");
+      }
+    }
+
+    setupChart();
+
+    // ====== WebSocket ======
+    const ws = new WebSocket("ws://color-hplc.onrender.com/ws"); // เปลี่ยนตาม server
+    ws.onopen = () => console.log("Connected to sensor server");
+    ws.onclose = () => console.log("Disconnected from sensor server");
+    ws.onmessage = (event) => {
+      try {
+        let data = JSON.parse(event.data);
+        addData(data.r, data.g, data.b);
+      } catch(e) { console.error(e); }
+    };
   </script>
 </body>
 </html>
