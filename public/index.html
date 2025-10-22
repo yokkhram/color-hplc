@@ -98,7 +98,8 @@
           datasets: [
             { label: 'Red', borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.3)', data: [], fill: true },
             { label: 'Green', borderColor: 'lime', backgroundColor: 'rgba(0,255,0,0.3)', data: [], fill: true },
-            { label: 'Blue', borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.3)', data: [], fill: true }
+            { label: 'Blue', borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.3)', data: [], fill: true },
+            { label: 'Yellow', borderColor: 'yellow', backgroundColor: 'rgba(255,255,0,0.3)', data: [], fill: true }
           ]
         },
         options: {
@@ -131,9 +132,10 @@
     function addData(r, g, b) {
       let t = Math.floor((Date.now() - startTime) / 1000);
       chart.data.labels.push(t);
-      chart.data.datasets[0].data.push(r);
-      chart.data.datasets[1].data.push(g);
-      chart.data.datasets[2].data.push(b);
+      chart.data.datasets[0].data.push(r);         // Red
+      chart.data.datasets[1].data.push(g);         // Green
+      chart.data.datasets[2].data.push(b);         // Blue
+      chart.data.datasets[3].data.push(Math.min(r + g, 255)); // Yellow = R + G, max 255
 
       updateColorBox(r, g, b);
       chart.update();
