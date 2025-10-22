@@ -20,58 +20,37 @@
       overflow: hidden;
     }
 
-    h1 {
-      margin-top: 10px;
-      font-size: 1.5rem;
-      color: #f0f6fc;
-    }
+    h1 { margin-top: 8px; font-size: 1.3rem; }
 
     .color-box {
-      width: 80%;
-      max-width: 250px;
-      height: 90px;
-      border-radius: 12px;
-      border: 2px solid #555;
-      margin-top: 10px;
+      width: 220px;
+      height: 80px;
+      border-radius: 10px;
+      border: 2px solid #444;
       transition: background 0.3s ease;
     }
 
-    .hex-code {
-      margin-top: 8px;
-      font-size: 1rem;
-      color: #aaa;
-    }
+    .hex-code { margin: 6px 0; color: #aaa; }
 
     canvas {
-      width: 90%;
+      width: 85%;
       max-width: 600px;
-      height: 40%;
-      background-color: #161b22;
+      height: 45%;
       border-radius: 10px;
-      margin-top: 5px;
+      background-color: #161b22;
     }
 
     button {
       background-color: #238636;
-      color: white;
-      font-size: 1rem;
       border: none;
+      color: white;
       border-radius: 8px;
       padding: 10px 20px;
       margin-bottom: 10px;
       cursor: pointer;
-      transition: background 0.2s;
     }
 
-    button:hover {
-      background-color: #2ea043;
-    }
-
-    @media (max-height: 600px) {
-      h1 { font-size: 1.2rem; }
-      .color-box { height: 70px; }
-      button { padding: 8px 16px; }
-    }
+    button:hover { background-color: #2ea043; }
   </style>
 </head>
 
@@ -82,97 +61,72 @@
   <div class="hex-code" id="hexText">#000000</div>
 
   <canvas id="chart"></canvas>
-
-  <button onclick="resetData()">🔄 Reset</button>
+  <button onclick="resetChart()">🔄 Reset</button>
 
   <script>
-    let chart;
-    let startTime = Date.now();
-
-    function setupChart() {
-      const ctx = document.getElementById("chart").getContext("2d");
-      chart = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: [],
-          datasets: [
-            { label: "Red", borderColor: "red", backgroundColor: "rgba(255,0,0,0.3)", data: [], fill: true },
-            { label: "Green", borderColor: "lime", backgroundColor: "rgba(0,255,0,0.3)", data: [], fill: true },
-            { label: "Blue", borderColor: "blue", backgroundColor: "rgba(0,0,255,0.3)", data: [], fill: true },
-            { label: "Yellow", borderColor: "yellow", backgroundColor: "rgba(255,255,0,0.3)", data: [], fill: true },
-          ],
+    const ctx = document.getElementById("chart").getContext("2d");
+    const chart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          { label: "Red", borderColor: "red", data: [] },
+          { label: "Green", borderColor: "lime", data: [] },
+          { label: "Blue", borderColor: "blue", data: [] },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        scales: {
+          y: { beginAtZero: true, max: 255, ticks: { color: "#aaa" }, grid: { color: "#333" } },
+          x: { ticks: { color: "#aaa" }, grid: { color: "#333" } },
         },
-        options: {
-          animation: false,
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 255,
-              ticks: { color: "#aaa" },
-              grid: { color: "#333" },
-            },
-            x: {
-              ticks: { color: "#aaa" },
-              grid: { color: "#333" },
-              title: { display: true, text: "เวลา (วินาที)", color: "#aaa" },
-            },
-          },
-          plugins: {
-            legend: { labels: { color: "#fff" } },
-          },
-        },
-      });
-    }
+        plugins: { legend: { labels: { color: "#fff" } } },
+      },
+    });
 
-    function updateColorBox(r, g, b, y) {
-      const hex = `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+    function updateUI(r, g, b, hex) {
       const box = document.getElementById("colorBox");
+      const text = document.getElementById("hexText");
       box.style.backgroundColor = `rgb(${r},${g},${b})`;
-      document.getElementById("hexText").textContent = hex;
+      text.textContent = hex;
     }
 
-    function addData(r, g, b, y) {
-      const t = Math.floor((Date.now() - startTime) / 1000);
+    function addData(r, g, b) {
+      const t = new Date().toLocaleTimeString();
       chart.data.labels.push(t);
       chart.data.datasets[0].data.push(r);
       chart.data.datasets[1].data.push(g);
       chart.data.datasets[2].data.push(b);
-      chart.data.datasets[3].data.push(y);
 
-      if (chart.data.labels.length > 60) {
+      if (chart.data.labels.length > 30) {
         chart.data.labels.shift();
         chart.data.datasets.forEach(ds => ds.data.shift());
       }
-
-      updateColorBox(r, g, b, y);
       chart.update();
     }
 
-    function resetData() {
-      startTime = Date.now();
+    async function fetchData() {
+      try {
+        const res = await fetch("https://color-hplc.onrender.com/latest");
+        const data = await res.json();
+        addData(data.r, data.g, data.b);
+        updateUI(data.r, data.g, data.b, data.hex);
+      } catch (err) {
+        console.log("⚠️ Fetch error:", err);
+      }
+    }
+
+    function resetChart() {
       chart.data.labels = [];
       chart.data.datasets.forEach(ds => ds.data = []);
       chart.update();
-      document.getElementById("colorBox").style.backgroundColor = "#000";
-      document.getElementById("hexText").textContent = "#000000";
+      updateUI(0, 0, 0, "#000000");
     }
 
-    window.onload = function () {
-      setupChart();
-
-      // ✅ เชื่อม WebSocket กับเซิร์ฟเวอร์ Render
-      const ws = new WebSocket("wss://color-hplc.onrender.com");
-
-      ws.onmessage = function (event) {
-        const data = JSON.parse(event.data);
-        addData(data.r, data.g, data.b, data.y);
-      };
-
-      ws.onopen = () => console.log("✅ Connected to WebSocket");
-      ws.onclose = () => console.log("❌ Disconnected");
-    };
+    setInterval(fetchData, 1000);
   </script>
 </body>
 </html>
