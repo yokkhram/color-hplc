@@ -14,20 +14,11 @@
       text-align: center;
     }
 
-    .container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      max-width: 100%;
-      margin: 0 auto;
-      padding: 10px;
-    }
-
     .color-box {
       width: 160px;
       height: 160px;
       border-radius: 8px;
-      margin: 10px 0;
+      margin: 10px auto;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -43,11 +34,20 @@
       color: #fff;
     }
 
-    canvas {
+    .chart-container {
+      width: 100%;
+      max-width: 800px;
+      height: 300px;          /* กำหนดความสูงคงที่ */
       background-color: #222;
       border-radius: 8px;
+      overflow-y: auto;       /* เปิด scroll เฉพาะกราฟ */
+      margin: 20px auto;
+      padding: 10px;
+    }
+
+    canvas {
       width: 100%;
-      height: 200px; /* ลดความสูงกราฟ */
+      height: 100%;           /* canvas เติมเต็ม div */
     }
 
     button {
@@ -60,13 +60,13 @@
     }
 
     @media (max-width: 480px) {
-      canvas {
-        height: 150px;
-      }
       .color-box {
         width: 120px;
         height: 120px;
         font-size: 16px;
+      }
+      .chart-container {
+        height: 200px;
       }
     }
   </style>
@@ -77,9 +77,12 @@
   <button onclick="resetData()">🔄 Reset</button>
   <button onclick="calibrateWhite()">📏 Calibrate White</button>
 
-  <div class="container">
-    <div class="color-box" id="colorBox">#000000</div>
-    <div id="colorHex">#000000</div>
+  <!-- กล่องสี -->
+  <div class="color-box" id="colorBox">#000000</div>
+  <div id="colorHex">#000000</div>
+
+  <!-- container กราฟ scrollable -->
+  <div class="chart-container">
     <canvas id="chart"></canvas>
   </div>
 
@@ -105,10 +108,7 @@
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            y: { 
-              beginAtZero: true,
-              max: 255
-            },
+            y: { beginAtZero: true, max: 255 },
             x: { title: { display: true, text: "Time (s)" } }
           }
         }
@@ -122,19 +122,18 @@
       box.style.backgroundColor = `rgb(${r},${g},${b})`;
       hexText.textContent = hex;
 
-      // ปรับสีตัวอักษรให้เห็นชัด
+      // ปรับสีตัวอักษรตามความสว่าง
       const brightness = (r*299 + g*587 + b*114) / 1000;
       box.style.color = brightness > 125 ? '#000' : '#fff';
     }
 
     function addData(r, g, b) {
-      let t = Math.floor((Date.now() - startTime) / 1000);
+      const t = Math.floor((Date.now() - startTime) / 1000);
       chart.data.labels.push(t);
-      chart.data.datasets[0].data.push(r);         // Red
-      chart.data.datasets[1].data.push(g);         // Green
-      chart.data.datasets[2].data.push(b);         // Blue
-      chart.data.datasets[3].data.push(Math.min(r + g, 255)); // Yellow = R + G, max 255
-
+      chart.data.datasets[0].data.push(r);
+      chart.data.datasets[1].data.push(g);
+      chart.data.datasets[2].data.push(b);
+      chart.data.datasets[3].data.push(Math.min(r+g, 255));
       updateColorBox(r, g, b);
       chart.update();
     }
@@ -144,7 +143,7 @@
       chart.data.labels = [];
       chart.data.datasets.forEach(ds => ds.data = []);
       chart.update();
-      updateColorBox(0, 0, 0);
+      updateColorBox(0,0,0);
     }
 
     function calibrateWhite() {
@@ -153,12 +152,12 @@
 
     setupChart();
 
-    // ======= Fetch ข้อมูลล่าสุดจาก server ทุก 0.5 วินาที =======
+    // Fetch ข้อมูลทุก 0.5 วินาที
     setInterval(async () => {
       try {
-        const res = await fetch("/latest-data"); // server ต้องเตรียม endpoint นี้
+        const res = await fetch("/latest-data");
         if (!res.ok) return;
-        const data = await res.json(); // {r:..., g:..., b:...}
+        const data = await res.json();
         addData(data.r, data.g, data.b);
       } catch(e) {
         console.error("Error fetching color data:", e);
