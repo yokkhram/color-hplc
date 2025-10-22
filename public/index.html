@@ -117,7 +117,7 @@
 
     function updateColorBox(r, g, b) {
       let hex = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`.toUpperCase();
-      const box = document.getElementById('colorBox');
+      const box = document.getElementById('');
       const hexText = document.getElementById('colorHex');
       box.style.backgroundColor = `rgb(${r},${g},${b})`;
       hexText.textContent = hex;
