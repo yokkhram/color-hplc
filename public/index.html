@@ -5,9 +5,6 @@
   <title>Color Sensor Monitor</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
-    }
     body {
       background-color: #111;
       color: #fff;
@@ -18,54 +15,58 @@
       justify-content: flex-start;
       min-height: 100vh;
       margin: 0;
-      padding: 20px;
+      padding: 15px;
       text-align: center;
     }
     h1 {
-      margin: 10px 0;
+      margin: 8px 0;
     }
     #colorBox {
-      width: 180px;
-      height: 180px;
-      border-radius: 20px;
+      width: 150px;
+      height: 150px;
+      border-radius: 16px;
       border: 2px solid #555;
       margin: 10px 0;
       transition: background-color 0.3s;
     }
     #hexValue {
-      font-size: 1.3em;
+      font-size: 1.2em;
       margin-bottom: 15px;
     }
     #buttons {
       display: flex;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
     button {
       background-color: #0f62fe;
       color: white;
       border: none;
-      padding: 10px 20px;
-      border-radius: 10px;
+      padding: 8px 18px;
+      border-radius: 8px;
       cursor: pointer;
-      font-size: 1em;
+      font-size: 0.95em;
       transition: 0.2s;
     }
     button:hover {
       background-color: #0043ce;
     }
+    #resetBtn {
+      background-color: #fa4d56;
+    }
     #colorChart {
-      width: 95%;
-      max-width: 500px;
-      height: 250px;
+      width: 90%;
+      max-width: 420px;
+      height: 180px; /* 🔹 ทำให้เล็กลง */
+      margin-top: 10px;
     }
     @media (max-width: 600px) {
       #colorBox {
-        width: 150px;
-        height: 150px;
+        width: 130px;
+        height: 130px;
       }
       #colorChart {
-        height: 200px;
+        height: 150px;
       }
     }
   </style>
@@ -74,14 +75,17 @@
   <h1>Color Sensor Monitor</h1>
   <div id="colorBox"></div>
   <div id="hexValue">#000000</div>
+
   <div id="buttons">
     <button id="calibrateBtn">Calibrate White</button>
-    <button id="resetBtn" style="background-color:#fa4d56;">Reset</button>
+    <button id="resetBtn">Reset</button>
   </div>
+
   <canvas id="colorChart"></canvas>
 
   <script>
     let chart;
+    let dataAvailable = false; // 🔸 ตรวจว่ามีข้อมูลหรือยัง
 
     function initChart() {
       const ctx = document.getElementById('colorChart').getContext('2d');
@@ -97,8 +101,11 @@
         },
         options: {
           responsive: true,
-          scales: { y: { min: 0, max: 255, ticks: { color: '#fff' } },
-                    x: { ticks: { color: '#fff' } } },
+          animation: false,
+          scales: {
+            y: { min: 0, max: 255, ticks: { color: '#fff' } },
+            x: { ticks: { color: '#fff' } }
+          },
           plugins: { legend: { labels: { color: '#fff' } } }
         }
       });
@@ -109,6 +116,9 @@
         const res = await fetch('/data');
         if (!res.ok) return;
         const color = await res.json();
+        if (!color || color.r === undefined) return;
+
+        dataAvailable = true; // 🔹 เริ่มมีข้อมูลจริง
 
         document.getElementById('colorBox').style.backgroundColor = color.hex;
         document.getElementById('hexValue').textContent = color.hex;
@@ -126,13 +136,14 @@
 
         chart.update();
       } catch (err) {
-        console.log("Waiting for data...");
+        // ❌ ถ้าไม่มีข้อมูลจากเซ็นเซอร์ -> ไม่ขยับกราฟ
+        if (dataAvailable) console.log("Lost connection to ESP...");
       }
     }
 
     document.getElementById('calibrateBtn').addEventListener('click', async () => {
       await fetch('/calibrate', { method: 'POST' });
-      alert("Calibrated — ESP จะเริ่มส่งข้อมูลแล้ว!");
+      alert("เริ่มทำงาน — ESP จะเริ่มส่งข้อมูลแล้ว!");
     });
 
     document.getElementById('resetBtn').addEventListener('click', () => {
@@ -141,6 +152,7 @@
       chart.update();
       document.getElementById('colorBox').style.backgroundColor = '#000';
       document.getElementById('hexValue').textContent = '#000000';
+      dataAvailable = false;
     });
 
     initChart();
