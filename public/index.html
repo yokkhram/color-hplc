@@ -2,7 +2,6 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>🎨 Real-time Color Sensor</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -14,71 +13,48 @@
       padding: 20px;
       text-align: center;
     }
-
-    h1 {
-      margin-bottom: 10px;
-    }
-
     .color-box {
       width: 160px;
       height: 160px;
-      border-radius: 12px;
-      margin: 15px auto;
+      border-radius: 8px;
+      margin: 10px auto;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 18px;
       font-weight: bold;
+      color: #000;
       transition: background-color 0.2s ease;
     }
-
-    #colorHex {
-      margin-top: 5px;
-      font-size: 16px;
-      color: #fff;
-    }
-
+    #colorHex { margin-top: 5px; font-size: 14px; color: #fff; }
     .chart-container {
       width: 100%;
       max-width: 800px;
       height: 300px;
       background-color: #222;
-      border-radius: 10px;
-      margin: 25px auto;
-      padding: 15px;
+      border-radius: 8px;
+      margin: 20px auto;
+      padding: 10px;
     }
-
+    canvas { width: 100%; height: 100%; }
     button {
-      margin: 6px;
-      padding: 10px 18px;
+      margin: 5px;
+      padding: 8px 16px;
       font-size: 16px;
-      border-radius: 6px;
+      border-radius: 5px;
       border: none;
       cursor: pointer;
-      background-color: #333;
-      color: #fff;
-      transition: 0.2s;
     }
-
-    button:hover {
-      background-color: #555;
-    }
-
     @media (max-width: 480px) {
-      .color-box {
-        width: 120px;
-        height: 120px;
-      }
-      .chart-container {
-        height: 220px;
-      }
+      .color-box { width: 120px; height: 120px; font-size: 16px; }
+      .chart-container { height: 200px; }
     }
   </style>
 </head>
 <body>
   <h1>🎨 Real-time Color Sensor</h1>
   <button onclick="resetData()">🔄 Reset</button>
-  <button onclick="startCalibrate()">📏 Calibrate White</button>
+  <button onclick="calibrateWhite()">📏 Calibrate White</button>
 
   <div class="color-box" id="colorBox">#000000</div>
   <div id="colorHex">#000000</div>
@@ -100,29 +76,25 @@
           datasets: [
             { label: 'Red', borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.3)', data: [], fill: true },
             { label: 'Green', borderColor: 'lime', backgroundColor: 'rgba(0,255,0,0.3)', data: [], fill: true },
-            { label: 'Blue', borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.3)', data: [], fill: true },
-            { label: 'Yellow', borderColor: 'yellow', backgroundColor: 'rgba(255,255,0,0.3)', data: [], fill: true }
+            { label: 'Blue', borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.3)', data: [], fill: true }
           ]
         },
         options: {
           animation: false,
           responsive: true,
           maintainAspectRatio: false,
-          scales: {
-            y: { beginAtZero: true, max: 255 },
-            x: { title: { display: true, text: "Time (s)" } }
-          }
+          scales: { y: { beginAtZero: true, max: 255 } }
         }
       });
     }
 
     function updateColorBox(r, g, b) {
-      const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`.toUpperCase();
+      const hex = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`.toUpperCase();
       const box = document.getElementById('colorBox');
       const hexText = document.getElementById('colorHex');
       box.style.backgroundColor = `rgb(${r},${g},${b})`;
       hexText.textContent = hex;
-      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      const brightness = (r*299 + g*587 + b*114) / 1000;
       box.style.color = brightness > 125 ? '#000' : '#fff';
     }
 
@@ -132,7 +104,6 @@
       chart.data.datasets[0].data.push(r);
       chart.data.datasets[1].data.push(g);
       chart.data.datasets[2].data.push(b);
-      chart.data.datasets[3].data.push(Math.min(r + g, 255));
       updateColorBox(r, g, b);
       chart.update();
     }
@@ -145,11 +116,9 @@
       updateColorBox(0, 0, 0);
     }
 
-    async function startCalibrate() {
-      const res = await fetch("/start", { method: "POST" });
-      if (res.ok) {
-        alert("✅ Calibrate White - เริ่มรับข้อมูลเรียลไทม์แล้ว");
-      }
+    async function calibrateWhite() {
+      await fetch("/calibrate", { method: "POST" });
+      alert("✅ เริ่มการส่งข้อมูลจาก ESP8266 แล้ว!");
     }
 
     setupChart();
@@ -160,7 +129,7 @@
         if (!res.ok) return;
         const data = await res.json();
         addData(data.r, data.g, data.b);
-      } catch (e) {
+      } catch(e) {
         console.error("Error fetching color data:", e);
       }
     }, 500);
