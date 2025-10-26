@@ -12,26 +12,25 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
-      min-height: 100vh;
       margin: 0;
       padding: 15px;
       text-align: center;
+      height: 100vh;
+      overflow: hidden;
     }
     h1 {
-      margin: 8px 0;
+      margin: 6px 0 10px;
     }
     #colorBox {
       width: 150px;
       height: 150px;
-      border-radius: 16px;
-      border: 2px solid #555;
-      margin: 10px 0;
+      border-radius: 12px;
+      border: 2px solid #444;
       transition: background-color 0.3s;
     }
     #hexValue {
-      font-size: 1.2em;
-      margin-bottom: 15px;
+      font-size: 1.1em;
+      margin: 8px 0 15px;
     }
     #buttons {
       display: flex;
@@ -42,10 +41,10 @@
       background-color: #0f62fe;
       color: white;
       border: none;
-      padding: 8px 18px;
-      border-radius: 8px;
+      padding: 8px 16px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 0.95em;
+      font-size: 0.9em;
       transition: 0.2s;
     }
     button:hover {
@@ -55,37 +54,38 @@
       background-color: #fa4d56;
     }
     #colorChart {
-      width: 90%;
-      max-width: 420px;
-      height: 180px; /* 🔹 ทำให้เล็กลง */
+      width: 95vw;       /* ✅ ให้เต็มแนวนอน */
+      max-width: 900px;  /* จำกัดสูงสุด */
+      height: 130px;     /* ✅ กราฟเตี้ยลง */
       margin-top: 10px;
     }
     @media (max-width: 600px) {
       #colorBox {
-        width: 130px;
-        height: 130px;
+        width: 120px;
+        height: 120px;
       }
       #colorChart {
-        height: 150px;
+        height: 110px;
       }
     }
   </style>
 </head>
 <body>
   <h1>Color Sensor Monitor</h1>
+
   <div id="colorBox"></div>
   <div id="hexValue">#000000</div>
 
   <div id="buttons">
-    <button id="calibrateBtn">Calibrate White</button>
-    <button id="resetBtn">Reset</button>
+    <button id="calibrateBtn">📏 Calibrate White</button>
+    <button id="resetBtn">🔄 Reset</button>
   </div>
 
   <canvas id="colorChart"></canvas>
 
   <script>
     let chart;
-    let dataAvailable = false; // 🔸 ตรวจว่ามีข้อมูลหรือยัง
+    let dataAvailable = false; // ✅ จะเริ่มกราฟเมื่อมีข้อมูลจริง
 
     function initChart() {
       const ctx = document.getElementById('colorChart').getContext('2d');
@@ -94,9 +94,10 @@
         data: {
           labels: [],
           datasets: [
-            { label: 'Red', data: [], borderColor: 'red', tension: 0.3 },
-            { label: 'Green', data: [], borderColor: 'lime', tension: 0.3 },
-            { label: 'Blue', data: [], borderColor: 'cyan', tension: 0.3 }
+            { label: 'Red', borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.2)', data: [], fill: true, tension: 0.3 },
+            { label: 'Green', borderColor: 'lime', backgroundColor: 'rgba(0,255,0,0.2)', data: [], fill: true, tension: 0.3 },
+            { label: 'Blue', borderColor: 'cyan', backgroundColor: 'rgba(0,0,255,0.2)', data: [], fill: true, tension: 0.3 },
+            { label: 'Yellow', borderColor: 'yellow', backgroundColor: 'rgba(255,255,0,0.2)', data: [], fill: true, tension: 0.3 }
           ]
         },
         options: {
@@ -115,35 +116,41 @@
       try {
         const res = await fetch('/data');
         if (!res.ok) return;
+
         const color = await res.json();
         if (!color || color.r === undefined) return;
 
-        dataAvailable = true; // 🔹 เริ่มมีข้อมูลจริง
-
-        document.getElementById('colorBox').style.backgroundColor = color.hex;
-        document.getElementById('hexValue').textContent = color.hex;
-
-        const time = new Date().toLocaleTimeString();
-        chart.data.labels.push(time);
-        chart.data.datasets[0].data.push(color.r);
-        chart.data.datasets[1].data.push(color.g);
-        chart.data.datasets[2].data.push(color.b);
-
-        if (chart.data.labels.length > 20) {
-          chart.data.labels.shift();
-          chart.data.datasets.forEach(ds => ds.data.shift());
-        }
-
-        chart.update();
+        dataAvailable = true; // ✅ มีข้อมูลแล้วถึงจะเริ่มขยับ
+        updateDisplay(color);
       } catch (err) {
-        // ❌ ถ้าไม่มีข้อมูลจากเซ็นเซอร์ -> ไม่ขยับกราฟ
-        if (dataAvailable) console.log("Lost connection to ESP...");
+        // ❌ ถ้าไม่มีข้อมูล — ไม่อัปเดตกกราฟ
       }
+    }
+
+    function updateDisplay(color) {
+      const { r, g, b, hex } = color;
+
+      document.getElementById('colorBox').style.backgroundColor = hex;
+      document.getElementById('hexValue').textContent = hex;
+
+      const time = new Date().toLocaleTimeString();
+      chart.data.labels.push(time);
+      chart.data.datasets[0].data.push(r);
+      chart.data.datasets[1].data.push(g);
+      chart.data.datasets[2].data.push(b);
+      chart.data.datasets[3].data.push(Math.min(r + g, 255)); // ✅ สีเหลือง = R+G
+
+      if (chart.data.labels.length > 30) {
+        chart.data.labels.shift();
+        chart.data.datasets.forEach(ds => ds.data.shift());
+      }
+
+      chart.update();
     }
 
     document.getElementById('calibrateBtn').addEventListener('click', async () => {
       await fetch('/calibrate', { method: 'POST' });
-      alert("เริ่มทำงาน — ESP จะเริ่มส่งข้อมูลแล้ว!");
+      alert('เริ่มทำงาน — ESP จะเริ่มส่งข้อมูลแล้ว!');
     });
 
     document.getElementById('resetBtn').addEventListener('click', () => {
@@ -156,7 +163,7 @@
     });
 
     initChart();
-    setInterval(fetchData, 1000);
+    setInterval(() => { if (dataAvailable) fetchData(); }, 1000);
   </script>
 </body>
 </html>
