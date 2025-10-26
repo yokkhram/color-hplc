@@ -1,60 +1,71 @@
-// server.js
-const http = require("http");
-const fs = require("fs");
-const path = require("path");
+import http from "http";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
-let latestData = { r: 0, g: 0, b: 0 };
-let calibrated = false;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+let latestColor = { r: 0, g: 0, b: 0, hex: "#000000" };
+let sendData = false;
 
 const server = http.createServer((req, res) => {
-  // ----- หน้าเว็บ -----
-  if (req.url === "/" || req.url === "/index.html") {
-    fs.readFile(path.join(__dirname, "public", "index.html"), (err, data) => {
+  // Serve index.html
+  if (req.method === "GET" && (req.url === "/" || req.url === "/index.html")) {
+    const filePath = path.join(__dirname, "public", "index.html");
+    fs.readFile(filePath, (err, data) => {
       if (err) {
         res.writeHead(500);
-        res.end("Error loading page");
-      } else {
-        res.writeHead(200, { "Content-Type": "text/html" });
-        res.end(data);
+        return res.end("Error loading index.html");
       }
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end(data);
     });
   }
 
-  // ----- รับข้อมูลจาก ESP8266 -----
-  else if (req.url === "/upload" && req.method === "POST") {
+  // Serve latest color JSON
+  else if (req.method === "GET" && req.url === "/data") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(latestColor));
+  }
+
+  // Receive color data from ESP8266
+  else if (req.method === "POST" && req.url === "/color") {
     let body = "";
-    req.on("data", chunk => (body += chunk));
+    req.on("data", chunk => (body += chunk.toString()));
     req.on("end", () => {
       try {
-        const json = JSON.parse(body);
-        latestData = json;
-        console.log("📩 New data:", json);
-        res.writeHead(200, { "Content-Type": "text/plain" });
+        const data = JSON.parse(body);
+        if (sendData && data.r !== undefined) {
+          latestColor = {
+            r: data.r,
+            g: data.g,
+            b: data.b,
+            hex: data.hex
+          };
+          console.log("📥 Received:", latestColor);
+        }
+        res.writeHead(200);
         res.end("OK");
-      } catch (e) {
+      } catch (err) {
         res.writeHead(400);
         res.end("Invalid JSON");
       }
     });
   }
 
-  // ----- เว็บเรียกขอข้อมูลล่าสุด -----
-  else if (req.url === "/latest-data" && req.method === "GET") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(JSON.stringify(latestData));
-  }
-
-  // ----- เมื่อกดปุ่ม Calibrate White -----
-  else if (req.url === "/calibrate" && req.method === "POST") {
-    calibrated = true;
-    console.log("✅ Calibrate command received");
-    res.writeHead(200, { "Content-Type": "text/plain" });
+  // Toggle calibration mode
+  else if (req.method === "POST" && req.url === "/calibrate") {
+    sendData = true;
+    console.log("✅ Calibration started — accepting ESP data");
+    res.writeHead(200);
     res.end("Calibrated");
   }
 
+  // 404
   else {
     res.writeHead(404);
-    res.end("Not found");
+    res.end("Not Found");
   }
 });
 
