@@ -1,13 +1,12 @@
 {
   "name": "color-sensor-server",
   "version": "1.0.0",
+  "description": "Node.js server for ESP8266 color sensor",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "body-parser": "^1.20.2",
-    "cors": "^2.8.5"
+    "express": "^4.19.2"
   }
 }
