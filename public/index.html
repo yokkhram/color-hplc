@@ -2,205 +2,172 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8" />
-  <title>Color Sensor Monitor</title>
+  <title>🎨 Real-time Color Sensor</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      background-color: #1a1a1a; /* ✅ เทาเข้มดูสบายตากว่าดำล้วน */
+      font-family: Arial, sans-serif;
+      background-color: #111;
       color: #fff;
-      font-family: "Segoe UI", Arial, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
       margin: 0;
       padding: 20px;
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    h1 {
-      margin: 10px 0 15px;
-      color: #00b4d8;
-      text-shadow: 0 0 10px rgba(0,180,216,0.5);
-    }
-
-    .panel {
-      background-color: #222;
-      border: 1px solid #444;
-      border-radius: 12px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.5);
-      padding: 20px;
-      width: 95%;
-      max-width: 950px;
       text-align: center;
     }
-
-    #colorBox {
-      width: 150px;
-      height: 150px;
-      border-radius: 12px;
-      border: 3px solid #555;
-      margin: 0 auto;
-      background-color: #000;
-      transition: background-color 0.3s;
-      box-shadow: inset 0 0 10px rgba(255,255,255,0.15);
+    h1 {
+      margin-bottom: 15px;
     }
-
-    #hexValue {
-      font-size: 1.2em;
-      margin-top: 10px;
-      font-weight: bold;
-      color: #ffeb3b;
-      text-shadow: 0 0 8px rgba(255,235,59,0.5);
-    }
-
-    #buttons {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin: 18px 0;
-    }
-
-    button {
-      background-color: #0f62fe;
-      color: white;
-      border: none;
-      padding: 8px 18px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 1em;
-      transition: all 0.2s;
-      box-shadow: 0 0 8px rgba(15,98,254,0.5);
-    }
-
-    button:hover {
-      background-color: #0043ce;
-      transform: scale(1.05);
-    }
-
-    #resetBtn {
-      background-color: #fa4d56;
-      box-shadow: 0 0 8px rgba(250,77,86,0.5);
-    }
-
-    #colorChart {
-      width: 100%;
-      height: 130px;  /* ✅ กราฟเตี้ยลง */
-      margin-top: 15px;
-      background-color: #181818;
-      border: 1px solid #333;
+    .color-box {
+      width: 180px;
+      height: 180px;
       border-radius: 10px;
+      margin: 10px auto;
+      border: 3px solid #444;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: bold;
+      transition: background-color 0.2s ease;
+    }
+    #colorHex {
+      margin-top: 6px;
+      font-size: 16px;
+      color: #fff;
+    }
+    .chart-container {
+      width: 95%;
+      max-width: 900px;
+      height: 220px;
+      background-color: #222;
+      border-radius: 8px;
+      border: 2px solid #333;
+      margin: 15px auto;
       padding: 10px;
-      box-shadow: inset 0 0 10px rgba(255,255,255,0.05);
     }
-
-    footer {
-      margin-top: 10px;
-      font-size: 0.9em;
-      color: #888;
+    button {
+      margin: 5px;
+      padding: 10px 18px;
+      font-size: 16px;
+      border-radius: 6px;
+      border: none;
+      background: #444;
+      color: white;
+      cursor: pointer;
+      transition: 0.2s;
     }
-
-    @media (max-width: 600px) {
-      #colorBox { width: 120px; height: 120px; }
-      #colorChart { height: 110px; }
+    button:hover {
+      background: #666;
+    }
+    @media (max-width: 480px) {
+      .color-box {
+        width: 130px;
+        height: 130px;
+      }
+      .chart-container {
+        height: 160px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="panel">
-    <h1>Color Sensor Monitor</h1>
+  <h1>🎨 Real-time Color Sensor</h1>
 
-    <div id="colorBox"></div>
-    <div id="hexValue">#000000</div>
+  <!-- ปุ่ม -->
+  <button onclick="calibrateWhite()">📏 Calibrate White</button>
+  <button onclick="resetData()">🔄 Reset</button>
 
-    <div id="buttons">
-      <button id="calibrateBtn">📏 Calibrate White</button>
-      <button id="resetBtn">🔄 Reset</button>
-    </div>
+  <!-- กล่องแสดงสี -->
+  <div class="color-box" id="colorBox">#000000</div>
+  <div id="colorHex">#000000</div>
 
-    <canvas id="colorChart"></canvas>
+  <!-- กราฟ -->
+  <div class="chart-container">
+    <canvas id="chart"></canvas>
   </div>
-
-  <footer>Powered by ESP8266 & Render</footer>
 
   <script>
     let chart;
-    let dataAvailable = false; // เริ่มขยับเมื่อมีข้อมูลจริง
+    let startTime = Date.now();
 
-    function initChart() {
-      const ctx = document.getElementById('colorChart').getContext('2d');
+    function setupChart() {
+      const ctx = document.getElementById("chart").getContext("2d");
       chart = new Chart(ctx, {
-        type: 'line',
+        type: "line",
         data: {
           labels: [],
           datasets: [
-            { label: 'Red', borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.2)', data: [], fill: true, tension: 0.3 },
-            { label: 'Green', borderColor: 'lime', backgroundColor: 'rgba(0,255,0,0.2)', data: [], fill: true, tension: 0.3 },
-            { label: 'Blue', borderColor: 'cyan', backgroundColor: 'rgba(0,0,255,0.2)', data: [], fill: true, tension: 0.3 },
-            { label: 'Yellow', borderColor: 'yellow', backgroundColor: 'rgba(255,255,0,0.2)', data: [], fill: true, tension: 0.3 }
+            { label: "Red", borderColor: "red", data: [], fill: false },
+            { label: "Green", borderColor: "lime", data: [], fill: false },
+            { label: "Blue", borderColor: "blue", data: [], fill: false },
+            { label: "Yellow", borderColor: "yellow", data: [], fill: false }
           ]
         },
         options: {
-          responsive: true,
           animation: false,
+          responsive: true,
+          maintainAspectRatio: false,
           scales: {
-            y: { min: 0, max: 255, ticks: { color: '#fff' } },
-            x: { ticks: { color: '#fff' } }
+            y: { beginAtZero: true, max: 255 },
+            x: { title: { display: true, text: "Time (s)" } }
           },
-          plugins: { legend: { labels: { color: '#fff' } } }
+          plugins: {
+            legend: { labels: { color: "white" } }
+          }
         }
       });
     }
 
-    async function fetchData() {
-      try {
-        const res = await fetch('/data');
-        if (!res.ok) return;
-
-        const color = await res.json();
-        if (!color || color.r === undefined) return;
-
-        dataAvailable = true;
-        updateDisplay(color);
-      } catch (err) {}
+    function updateColorBox(r, g, b) {
+      const hex = "#" + 
+        r.toString(16).padStart(2, "0") + 
+        g.toString(16).padStart(2, "0") + 
+        b.toString(16).padStart(2, "0");
+      const box = document.getElementById("colorBox");
+      const hexText = document.getElementById("colorHex");
+      box.style.backgroundColor = `rgb(${r},${g},${b})`;
+      hexText.textContent = hex.toUpperCase();
+      const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+      box.style.color = brightness > 125 ? "#000" : "#fff";
     }
 
-    function updateDisplay(color) {
-      const { r, g, b, hex } = color;
-      document.getElementById('colorBox').style.backgroundColor = hex;
-      document.getElementById('hexValue').textContent = hex;
-
-      const time = new Date().toLocaleTimeString();
-      chart.data.labels.push(time);
+    function addData(r, g, b) {
+      const t = Math.floor((Date.now() - startTime) / 1000);
+      chart.data.labels.push(t);
       chart.data.datasets[0].data.push(r);
       chart.data.datasets[1].data.push(g);
       chart.data.datasets[2].data.push(b);
       chart.data.datasets[3].data.push(Math.min(r + g, 255));
-
-      if (chart.data.labels.length > 30) {
-        chart.data.labels.shift();
-        chart.data.datasets.forEach(ds => ds.data.shift());
-      }
-
+      updateColorBox(r, g, b);
       chart.update();
     }
 
-    document.getElementById('calibrateBtn').addEventListener('click', async () => {
-      await fetch('/calibrate', { method: 'POST' });
-      alert('เริ่มทำงาน — ESP จะเริ่มส่งข้อมูลแล้ว!');
-    });
-
-    document.getElementById('resetBtn').addEventListener('click', () => {
+    function resetData() {
+      startTime = Date.now();
       chart.data.labels = [];
       chart.data.datasets.forEach(ds => ds.data = []);
       chart.update();
-      document.getElementById('colorBox').style.backgroundColor = '#000';
-      document.getElementById('hexValue').textContent = '#000000';
-      dataAvailable = false;
-    });
+      fetch("/reset", { method: "POST" });
+      updateColorBox(0,0,0);
+    }
 
-    initChart();
-    setInterval(() => { if (dataAvailable) fetchData(); }, 1000);
+    async function calibrateWhite() {
+      const res = await fetch("/calibrate", { method: "POST" });
+      if (res.ok) alert("📏 Calibrated! Sensor ready to send data.");
+    }
+
+    setupChart();
+
+    // ดึงข้อมูลใหม่ทุก 0.5 วินาที
+    setInterval(async () => {
+      try {
+        const res = await fetch("/latest-data");
+        if (!res.ok) return;
+        const data = await res.json();
+        addData(data.r, data.g, data.b);
+      } catch (e) {
+        console.error("Error fetching color data:", e);
+      }
+    }, 500);
   </script>
 </body>
 </html>
