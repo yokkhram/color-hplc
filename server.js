@@ -1,41 +1,27 @@
-const express = require("express");
-const app = express();
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
 app.use(express.json());
-app.use(express.static("public"));
+app.use(express.static(path.join(__dirname, "public")));
 
 let latestData = { r: 0, g: 0, b: 0 };
-let isCalibrated = false;
 
-// ✅ เริ่มทำงานหลังจากกด Calibrate White
-app.post("/calibrate", (req, res) => {
-  isCalibrated = true;
-  console.log("✅ Calibrate White activated!");
-  res.json({ status: "ok" });
-});
-
-// ✅ รับข้อมูลจาก ESP8266 ผ่าน HTTP POST
-app.post("/upload", (req, res) => {
-  if (!isCalibrated) {
-    return res.status(403).json({ error: "Not calibrated yet" });
-  }
+// Endpoint สำหรับ NodeMCU ส่งข้อมูลเข้ามา
+app.post("/data", (req, res) => {
   latestData = req.body;
-  console.log("📥 Received data:", latestData);
-  res.json({ status: "ok" });
+  console.log("✅ Data received:", latestData);
+  res.sendStatus(200);
 });
 
-// ✅ ให้หน้าเว็บดึงข้อมูลล่าสุดแบบเรียลไทม์
+// Endpoint ให้หน้าเว็บดึงข้อมูลล่าสุด
 app.get("/latest-data", (req, res) => {
   res.json(latestData);
 });
 
-// ✅ ปุ่ม Reset
-app.post("/reset", (req, res) => {
-  latestData = { r: 0, g: 0, b: 0 };
-  isCalibrated = false;
-  console.log("🔄 Reset data.");
-  res.json({ status: "reset" });
-});
-
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🌐 Server running on port ${PORT}`));
