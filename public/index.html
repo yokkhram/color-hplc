@@ -87,6 +87,7 @@ function resetData(){
 
 setupChart();
 
+// EventSource สำหรับรับ SSE
 const evtSource = new EventSource("/events");
 evtSource.onmessage = event=>{
   console.log("SSE received:", event.data);
