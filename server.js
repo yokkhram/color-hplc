@@ -13,27 +13,29 @@ app.use(express.static(path.join(__dirname, "public")));
 let latestColor = { r: 0, g: 0, b: 0 };
 let clients = [];
 
-// 🟩 Endpoint รับข้อมูลจาก ESP8266
+// 🟩 รับข้อมูลจาก ESP8266
 app.post("/api/color", (req, res) => {
   latestColor = req.body;
   console.log("📡 New color:", latestColor);
 
-  // ส่งข้อมูลให้ทุก client ที่เปิดเว็บอยู่
+  // ส่งให้ทุก client SSE
   clients.forEach((client) => client.res.write(`data: ${JSON.stringify(latestColor)}\n\n`));
 
   res.status(200).json({ success: true });
 });
 
-// 🟩 Endpoint สำหรับหน้าเว็บ (SSE)
+// 🟩 SSE สำหรับเว็บ
 app.get("/events", (req, res) => {
   res.set({
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
-    Connection: "keep-alive",
+    "Connection": "keep-alive",
   });
   res.flushHeaders();
 
+  // ส่งค่าล่าสุดตอนเปิดเว็บ
   res.write(`data: ${JSON.stringify(latestColor)}\n\n`);
+
   const clientId = Date.now();
   clients.push({ id: clientId, res });
 
@@ -42,6 +44,6 @@ app.get("/events", (req, res) => {
   });
 });
 
-// 🟩 เริ่มทำงาน
+// 🟩 เริ่ม server
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
