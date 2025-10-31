@@ -29,9 +29,16 @@ app.post("/api/color", (req, res) => {
 
 // 📡 คำสั่ง Calibrate จากเว็บ
 app.post("/api/calibrate", (req, res) => {
-  calibrated = true;
+  calibrated = true; // ตั้งเป็น true
   console.log("✅ Calibrate command received from webpage");
   res.json({ success: true, message: "Calibration started" });
+});
+
+// 📡 ESP จะเช็คว่ามี calibrate หรือยัง
+app.get("/api/check-calibrate", (req, res) => {
+  res.json({ calibrated }); // ส่ง true/false ไปให้ ESP
+  // หลังจาก ESP เช็คแล้ว เราสามารถ reset เป็น false ได้ ถ้าอยากให้ calibrate เป็นครั้งเดียว
+  // calibrated = false; 
 });
 
 // 📡 Server-Sent Events สำหรับหน้าเว็บ
