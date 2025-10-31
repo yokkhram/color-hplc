@@ -14,12 +14,12 @@ let latestColor = { r: 0, g: 0, b: 0 };
 let clients = [];
 let calibrated = false;
 
-// 📡 รับข้อมูลสีจาก ESP8266
+// 🔹 รับข้อมูลสีจาก ESP8266
 app.post("/api/color", (req, res) => {
   latestColor = req.body;
   console.log("🎨 New color:", latestColor);
 
-  // ส่งข้อมูลไปยังทุก client ที่เปิดเว็บอยู่
+  // ส่งข้อมูลไปยังทุก client ที่เปิดเว็บอยู่ (SSE)
   clients.forEach((client) =>
     client.res.write(`data: ${JSON.stringify(latestColor)}\n\n`)
   );
@@ -27,21 +27,21 @@ app.post("/api/color", (req, res) => {
   res.status(200).json({ success: true });
 });
 
-// 📡 คำสั่ง Calibrate จากเว็บ
+// 🔹 รับคำสั่ง calibrate จากหน้าเว็บ
 app.post("/api/calibrate", (req, res) => {
-  calibrated = true; // ตั้งเป็น true
+  calibrated = true;
   console.log("✅ Calibrate command received from webpage");
   res.json({ success: true, message: "Calibration started" });
 });
 
-// 📡 ESP จะเช็คว่ามี calibrate หรือยัง
+// 🔹 ESP จะเช็คว่ามี calibrate หรือยัง
 app.get("/api/check-calibrate", (req, res) => {
-  res.json({ calibrated }); // ส่ง true/false ไปให้ ESP
-  // หลังจาก ESP เช็คแล้ว เราสามารถ reset เป็น false ได้ ถ้าอยากให้ calibrate เป็นครั้งเดียว
-  // calibrated = false; 
+  res.json({ calibrated }); 
+  // ถ้าอยากให้ calibrate ครั้งเดียวหลัง ESP อ่านแล้ว
+  // calibrated = false;
 });
 
-// 📡 Server-Sent Events สำหรับหน้าเว็บ
+// 🔹 Server-Sent Events สำหรับหน้าเว็บแสดงสี realtime
 app.get("/events", (req, res) => {
   res.set({
     "Content-Type": "text/event-stream",
@@ -60,6 +60,6 @@ app.get("/events", (req, res) => {
   });
 });
 
-// 🟢 เริ่มเซิร์ฟเวอร์
+// 🟢 เริ่ม server
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
