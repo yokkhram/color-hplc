@@ -46,7 +46,6 @@
     }
     button:hover { opacity: 0.8; }
     .btn-reset { background-color: #555; color: #fff; }
-    .btn-cal { background-color: #1e90ff; color: #fff; }
   </style>
 </head>
 <body>
@@ -55,7 +54,6 @@
   <div id="colorHex">#000000</div>
 
   <button class="btn-reset" onclick="resetData()">🔄 Reset</button>
-
 
   <div class="chart-container"><canvas id="chart"></canvas></div>
 
@@ -116,11 +114,6 @@
       chart.data.datasets.forEach(ds=>ds.data=[]);
       updateColorBox(0,0,0);
       chart.update();
-    }
-
-    async function calibrateWhite(){
-      await fetch("/api/calibrate",{method:"POST"});
-      alert("📡 Calibrate command sent!");
     }
 
     setupChart();
