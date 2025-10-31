@@ -1,12 +1,12 @@
 {
-  "name": "color-sensor-server",
+  "name": "color-sensor-dashboard",
   "version": "1.0.0",
-  "description": "Node.js server for ESP8266 color sensor",
-  "main": "server.js",
+  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
+    "cors": "^2.8.5",
     "express": "^4.19.2"
   }
 }
