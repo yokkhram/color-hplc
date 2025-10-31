@@ -3,63 +3,73 @@ import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
 
-const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 let latestColor = { r: 0, g: 0, b: 0 };
-let clients = [];
 let calibrated = false;
 
-// 🔹 รับข้อมูลสีจาก ESP8266
+// รับข้อมูลสีจาก ESP
 app.post("/api/color", (req, res) => {
-  latestColor = req.body;
-  console.log("🎨 New color:", latestColor);
-
-  // ส่งข้อมูลไปยังทุก client ที่เปิดเว็บอยู่ (SSE)
-  clients.forEach((client) =>
-    client.res.write(`data: ${JSON.stringify(latestColor)}\n\n`)
-  );
-
-  res.status(200).json({ success: true });
+  try {
+    const body = req.body;
+    if (typeof body.r === "number" && typeof body.g === "number" && typeof body.b === "number") {
+      latestColor = { r: body.r, g: body.g, b: body.b };
+      console.log("🎨 New color:", latestColor);
+      res.status(200).json({ success: true });
+    } else {
+      res.status(400).json({ success: false, message: "Invalid payload" });
+    }
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
 });
 
-// 🔹 รับคำสั่ง calibrate จากหน้าเว็บ
+// ปุ่ม calibrate บนเว็บจะเรียก endpoint นี้
 app.post("/api/calibrate", (req, res) => {
   calibrated = true;
-  console.log("✅ Calibrate command received from webpage");
+  console.log("✅ Calibrate command received (from web).");
   res.json({ success: true, message: "Calibration started" });
 });
 
-// 🔹 ESP จะเช็คว่ามี calibrate หรือยัง
+// ESP จะ poll endpoint นี้ เพื่อตรวจสอบสถานะ calibrate
 app.get("/api/check-calibrate", (req, res) => {
-  res.json({ calibrated }); 
-  // ถ้าอยากให้ calibrate ครั้งเดียวหลัง ESP อ่านแล้ว
+  res.json({ calibrated });
+  // ถ้าต้องการให้ calibrate เป็นครั้งเดียวให้ uncomment บรรทัดถัดไป:
   // calibrated = false;
 });
 
-// 🔹 Server-Sent Events สำหรับหน้าเว็บแสดงสี realtime
+// SSE: ส่ง color ให้หน้าเว็บแบบ realtime
 app.get("/events", (req, res) => {
-  res.set({
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    Connection: "keep-alive",
-  });
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
   res.flushHeaders();
 
+  // ส่งค่าเริ่มต้นทันที
   res.write(`data: ${JSON.stringify(latestColor)}\n\n`);
 
-  const clientId = Date.now();
-  clients.push({ id: clientId, res });
+  const interval = setInterval(() => {
+    res.write(`data: ${JSON.stringify(latestColor)}\n\n`);
+  }, 500); // ส่งทุก 0.5s
 
   req.on("close", () => {
-    clients = clients.filter((c) => c.id !== clientId);
+    clearInterval(interval);
   });
 });
 
-// 🟢 เริ่ม server
+// (Optional) reset endpoint
+app.post("/api/reset-calibrate", (req, res) => {
+  calibrated = false;
+  console.log("🔁 Calibrate reset by API");
+  res.json({ success: true });
+});
+
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});
