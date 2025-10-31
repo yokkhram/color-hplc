@@ -13,13 +13,18 @@ app.use(express.static(path.join(__dirname,"public")));
 let latestColor = { r:0, g:0, b:0 };
 let clients = [];
 
+// 🟩 รับข้อมูลจาก ESP8266
 app.post("/api/color",(req,res)=>{
   latestColor = req.body;
   console.log("📡 New color:", latestColor);
+
+  // ส่งให้ทุก client SSE
   clients.forEach(c=>c.res.write(`data: ${JSON.stringify(latestColor)}\n\n`));
+
   res.status(200).json({ success:true });
 });
 
+// 🟩 SSE สำหรับเว็บ
 app.get("/events",(req,res)=>{
   res.set({
     "Content-Type":"text/event-stream",
