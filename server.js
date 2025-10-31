@@ -3,73 +3,45 @@ import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 let latestColor = { r: 0, g: 0, b: 0 };
-let calibrated = false;
+let clients = [];
 
-// รับข้อมูลสีจาก ESP
+// 🟩 Endpoint รับข้อมูลจาก ESP8266
 app.post("/api/color", (req, res) => {
-  try {
-    const body = req.body;
-    if (typeof body.r === "number" && typeof body.g === "number" && typeof body.b === "number") {
-      latestColor = { r: body.r, g: body.g, b: body.b };
-      console.log("🎨 New color:", latestColor);
-      res.status(200).json({ success: true });
-    } else {
-      res.status(400).json({ success: false, message: "Invalid payload" });
-    }
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false });
-  }
+  latestColor = req.body;
+  console.log("📡 New color:", latestColor);
+
+  // ส่งข้อมูลให้ทุก client ที่เปิดเว็บอยู่
+  clients.forEach((client) => client.res.write(`data: ${JSON.stringify(latestColor)}\n\n`));
+
+  res.status(200).json({ success: true });
 });
 
-// ปุ่ม calibrate บนเว็บจะเรียก endpoint นี้
-app.post("/api/calibrate", (req, res) => {
-  calibrated = true;
-  console.log("✅ Calibrate command received (from web).");
-  res.json({ success: true, message: "Calibration started" });
-});
-
-// ESP จะ poll endpoint นี้ เพื่อตรวจสอบสถานะ calibrate
-app.get("/api/check-calibrate", (req, res) => {
-  res.json({ calibrated });
-  // ถ้าต้องการให้ calibrate เป็นครั้งเดียวให้ uncomment บรรทัดถัดไป:
-  // calibrated = false;
-});
-
-// SSE: ส่ง color ให้หน้าเว็บแบบ realtime
+// 🟩 Endpoint สำหรับหน้าเว็บ (SSE)
 app.get("/events", (req, res) => {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
+  res.set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache",
+    Connection: "keep-alive",
+  });
   res.flushHeaders();
 
-  // ส่งค่าเริ่มต้นทันที
   res.write(`data: ${JSON.stringify(latestColor)}\n\n`);
-
-  const interval = setInterval(() => {
-    res.write(`data: ${JSON.stringify(latestColor)}\n\n`);
-  }, 500); // ส่งทุก 0.5s
+  const clientId = Date.now();
+  clients.push({ id: clientId, res });
 
   req.on("close", () => {
-    clearInterval(interval);
+    clients = clients.filter((client) => client.id !== clientId);
   });
 });
 
-// (Optional) reset endpoint
-app.post("/api/reset-calibrate", (req, res) => {
-  calibrated = false;
-  console.log("🔁 Calibrate reset by API");
-  res.json({ success: true });
-});
-
+// 🟩 เริ่มทำงาน
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
