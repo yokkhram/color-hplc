@@ -1,8 +1,7 @@
-// server.js
 import express from "express";
-import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import cors from "cors";
 
 const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -11,15 +10,15 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-let latestColor = { r: 0, g: 0, b: 0 };
-let calibrateRequested = false;
+let latestColor = { r: 0, g: 0, b: 0, time: 0 };
 let clients = [];
 
-// 🟩 ESP ส่งค่าสีมา
+// 📡 รับข้อมูลจาก ESP8266 (HTTP POST)
 app.post("/api/color", (req, res) => {
   latestColor = req.body;
-  console.log("📡 Received color:", latestColor);
+  console.log("📩 New color:", latestColor);
 
+  // ส่งข้อมูลให้ทุกเว็บที่เปิดอยู่ (ผ่าน SSE)
   clients.forEach((client) =>
     client.res.write(`data: ${JSON.stringify(latestColor)}\n\n`)
   );
@@ -27,7 +26,7 @@ app.post("/api/color", (req, res) => {
   res.status(200).json({ success: true });
 });
 
-// 🟩 หน้าเว็บขอรับข้อมูลแบบเรียลไทม์
+// 📡 EventSource (SSE) สำหรับเว็บ
 app.get("/events", (req, res) => {
   res.set({
     "Content-Type": "text/event-stream",
@@ -46,18 +45,6 @@ app.get("/events", (req, res) => {
   });
 });
 
-// 🟩 เมื่อกด Calibrate บนเว็บ
-app.post("/api/calibrate", (req, res) => {
-  calibrateRequested = true;
-  console.log("⚙️ Calibrate requested from web");
-  res.json({ success: true });
-});
-
-// 🟩 ESP จะถามว่าต้องเริ่มยังไหม
-app.get("/api/check-calibrate", (req, res) => {
-  res.json({ calibrate: calibrateRequested });
-  if (calibrateRequested) calibrateRequested = false;
-});
-
+// 🟢 Start Server
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
