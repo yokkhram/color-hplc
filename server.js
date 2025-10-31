@@ -10,15 +10,16 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
-let latestColor = { r: 0, g: 0, b: 0, time: 0 };
+let latestColor = { r: 0, g: 0, b: 0 };
 let clients = [];
+let calibrated = false;
 
-// 📡 รับข้อมูลจาก ESP8266 (HTTP POST)
+// 📡 รับข้อมูลสีจาก ESP8266
 app.post("/api/color", (req, res) => {
   latestColor = req.body;
-  console.log("📩 New color:", latestColor);
+  console.log("🎨 New color:", latestColor);
 
-  // ส่งข้อมูลให้ทุกเว็บที่เปิดอยู่ (ผ่าน SSE)
+  // ส่งข้อมูลไปยังทุก client ที่เปิดเว็บอยู่
   clients.forEach((client) =>
     client.res.write(`data: ${JSON.stringify(latestColor)}\n\n`)
   );
@@ -26,7 +27,14 @@ app.post("/api/color", (req, res) => {
   res.status(200).json({ success: true });
 });
 
-// 📡 EventSource (SSE) สำหรับเว็บ
+// 📡 คำสั่ง Calibrate จากเว็บ
+app.post("/api/calibrate", (req, res) => {
+  calibrated = true;
+  console.log("✅ Calibrate command received from webpage");
+  res.json({ success: true, message: "Calibration started" });
+});
+
+// 📡 Server-Sent Events สำหรับหน้าเว็บ
 app.get("/events", (req, res) => {
   res.set({
     "Content-Type": "text/event-stream",
@@ -45,6 +53,6 @@ app.get("/events", (req, res) => {
   });
 });
 
-// 🟢 Start Server
+// 🟢 เริ่มเซิร์ฟเวอร์
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
