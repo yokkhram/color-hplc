@@ -87,7 +87,7 @@ function setupChart() {
       datasets: [
         { label: 'Red', borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.25)', data: [], fill: true, tension: 0.3 },
         { label: 'Green', borderColor: 'lime', backgroundColor: 'rgba(0,255,0,0.25)', data: [], fill: true, tension: 0.3 },
-        { label: 'Blue', borderColor: 'cyan', backgroundColor: 'rgba(0,0,255,0.25)', data: [], fill: true, tension: 0.3 },
+        { label: 'Blue', borderColor: '#0055FF', backgroundColor: 'rgba(0,85,255,0.25)', data: [], fill: true, tension: 0.3 },
         { label: 'Yellow', borderColor: 'yellow', backgroundColor: 'rgba(255,255,0,0.25)', data: [], fill: true, tension: 0.3 }
       ]
     },
@@ -127,7 +127,6 @@ function updateColorBox(r, g, b) {
 }
 
 function addData(r, g, b) {
-  // เพิ่มเวลาแบบห่างเท่ากัน 2 วินาที
   timeCounter += 2;
   chart.data.labels.push(timeCounter);
 
@@ -137,7 +136,6 @@ function addData(r, g, b) {
   let yellow = Math.min(Math.round((r + g) / 2), 255);
   chart.data.datasets[3].data.push(yellow);
 
-  // เก็บข้อมูลแค่ 40 จุดสุดท้าย
   if (chart.data.labels.length > 40) {
     chart.data.labels.shift();
     chart.data.datasets.forEach(ds => ds.data.shift());
@@ -155,7 +153,6 @@ function resetData() {
   chart.update('none');
 }
 
-// เริ่มกราฟ
 setupChart();
 
 // รับข้อมูลจากเซิร์ฟเวอร์แบบเรียลไทม์ (SSE)
