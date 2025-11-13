@@ -3,38 +3,179 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🧪 HPLC Small Scale</title>
+<title>🧪 HPLC Small Scale</title> <!-- ✅ เปลี่ยนชื่อเว็บ -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    background-color: #0e0e0e;
-    color: #ffffff;
-    text-align: center;
-    margin: 0;
-    padding: 20px;
+body {
+  font-family: Arial, sans-serif;
+  background: #0a0a0a;
+  color: #fff;
+  text-align: center;
+  margin: 0;
+  padding: 20px;
+}
+h1 { margin-bottom: 10px; }
+.color-box {
+  width: 180px;
+  height: 180px;
+  border-radius: 10px;
+  border: 2px solid #555;
+  margin: 15px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+#colorHex {
+  font-size: 16px;
+  color: #ccc;
+  margin-bottom: 10px;
+}
+.chart-container {
+  width: 95%;
+  max-width: 1200px;
+  height: 400px;
+  background: #1b1b1b;
+  border: 2px solid #333;
+  border-radius: 12px;
+  margin: 20px auto;
+  padding: 10px;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.05);
+}
+canvas { width: 100%; height: 100%; }
+button {
+  margin: 6px;
+  padding: 8px 18px;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+button:hover { opacity: 0.85; }
+.btn-reset {
+  background-color: #444;
+  color: #fff;
+}
+</style>
+</head>
+<body>
+<h1>🧪 HPLC Small Scale</h1> <!-- ✅ ชื่อหัวเว็บ -->
+
+<div class="color-box" id="colorBox">#000000</div>
+<div id="colorHex">#000000</div>
+<button class="btn-reset" onclick="resetData()">🔄 Reset</button>
+
+<div class="chart-container">
+  <canvas id="chart"></canvas>
+</div>
+
+<script>
+let chart;
+let timeCounter = 0;
+
+function setupChart() {
+  const ctx = document.getElementById('chart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        { label: 'Red', borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.25)', data: [], fill: true, tension: 0.3 },
+        { label: 'Green', borderColor: 'lime', backgroundColor: 'rgba(0,255,0,0.25)', data: [], fill: true, tension: 0.3 },
+        { label: 'Blue', borderColor: '#0055FF', backgroundColor: 'rgba(0,85,255,0.25)', data: [], fill: true, tension: 0.3 },
+        { label: 'Yellow', borderColor: 'yellow', backgroundColor: 'rgba(255,255,0,0.25)', data: [], fill: true, tension: 0.3 }
+      ]
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 255,
+          title: {               <!-- ✅ เพิ่มชื่อแกน Y -->
+            display: true,
+            text: 'Color Intensity (0–255)',
+            color: '#fff',
+            font: { size: 14 }
+          },
+          ticks: { color: '#ddd' },
+          grid: { color: '#333' }
+        },
+        x: {
+          title: {               <!-- ✅ เพิ่มชื่อแกน X -->
+            display: true,
+            text: 'Time (s)',
+            color: '#fff',
+            font: { size: 14 }
+          },
+          ticks: { color: '#aaa' },
+          grid: { color: '#222' }
+        }
+      },
+      plugins: {
+        legend: {
+          labels: { color: '#fff', boxWidth: 15 }
+        }
+      }
+    }
+  });
+}
+
+function updateColorBox(r, g, b) {
+  const hex = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`.toUpperCase();
+  const box = document.getElementById('colorBox');
+  box.style.backgroundColor = `rgb(${r},${g},${b})`;
+  document.getElementById('colorHex').textContent = hex;
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  box.style.color = brightness > 125 ? '#000' : '#fff';
+}
+
+function addData(r, g, b) {
+  timeCounter += 2;
+  chart.data.labels.push(timeCounter);
+
+  chart.data.datasets[0].data.push(r);
+  chart.data.datasets[1].data.push(g);
+  chart.data.datasets[2].data.push(b);
+  let yellow = Math.min(Math.round((r + g) / 2), 255);
+  chart.data.datasets[3].data.push(yellow);
+
+  if (chart.data.labels.length > 40) {
+    chart.data.labels.shift();
+    chart.data.datasets.forEach(ds => ds.data.shift());
   }
-  h1 {
-    margin-bottom: 15px;
-    color: #00bfff;
+
+  updateColorBox(r, g, b);
+  chart.update('none');
+}
+
+function resetData() {
+  timeCounter = 0;
+  chart.data.labels = [];
+  chart.data.datasets.forEach(ds => ds.data = []);
+  updateColorBox(0, 0, 0);
+  chart.update('none');
+}
+
+setupChart();
+
+// ✅ รับข้อมูลจากเซิร์ฟเวอร์แบบ Real-Time (SSE)
+const evtSource = new EventSource("/events");
+evtSource.onmessage = event => {
+  try {
+    const data = JSON.parse(event.data);
+    addData(data.r, data.g, data.b);
+  } catch (err) {
+    console.error("Invalid SSE data:", err);
   }
-  .color-box {
-    width: 160px;
-    height: 160px;
-    border-radius: 12px;
-    border: 2px solid #555;
-    margin: 15px auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    font-weight: bold;
-    transition: background-color 0.3s;
-  }
-  #colorHex {
-    font-size: 16px;
-    color: #ccc;
-    margin-bottom: 15px;
+};
+</script>
+</body>
+</html>    margin-bottom: 15px;
   }
   .chart-container {
     width: 95%;
