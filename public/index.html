@@ -3,21 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🎨 Real-Time Color Sensor</title>
+<title>HPLC Small Scale</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 body {
-  font-family: Arial;
-  background: #0a0a0a;
+  font-family: Arial, sans-serif;
+  background: #0e0e0e;
   color: #fff;
   text-align: center;
   margin: 0;
   padding: 20px;
 }
-h1 { margin-bottom: 10px; }
+h1 {
+  margin-bottom: 10px;
+}
 .color-box {
-  width: 180px;
-  height: 180px;
+  width: 160px;
+  height: 160px;
   border-radius: 10px;
   border: 2px solid #555;
   margin: 15px auto;
@@ -35,6 +37,139 @@ h1 { margin-bottom: 10px; }
 }
 .chart-container {
   width: 95%;
+  max-width: 900px;
+  height: 350px;
+  background: #222;
+  border: 2px solid #444;
+  border-radius: 10px;
+  margin: 15px auto;
+  padding: 15px;
+}
+button {
+  margin: 6px;
+  padding: 8px 18px;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+button:hover {
+  opacity: 0.8;
+}
+.btn-reset {
+  background-color: #555;
+  color: #fff;
+}
+</style>
+</head>
+<body>
+<h1>🧪 HPLC Small Scale</h1>
+<div class="color-box" id="colorBox">#000000</div>
+<div id="colorHex">#000000</div>
+<button class="btn-reset" onclick="resetData()">🔄 Reset</button>
+
+<div class="chart-container">
+  <canvas id="chart"></canvas>
+</div>
+
+<script>
+let chart;
+let elapsedSeconds = 0;
+
+function setupChart(){
+  const ctx = document.getElementById('chart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [
+        { label: 'Red', borderColor: 'red', backgroundColor: 'rgba(255,0,0,0.3)', data: [], fill: true, tension: 0.4 },
+        { label: 'Green', borderColor: 'lime', backgroundColor: 'rgba(0,255,0,0.3)', data: [], fill: true, tension: 0.4 },
+        { label: 'Blue', borderColor: 'blue', backgroundColor: 'rgba(0,0,255,0.3)', data: [], fill: true, tension: 0.4 },
+        { label: 'Yellow', borderColor: 'yellow', backgroundColor: 'rgba(255,255,0,0.3)', data: [], fill: true, tension: 0.4 }
+      ]
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 255,
+          title: {
+            display: true,
+            text: 'Intensity (0–255)',
+            color: '#fff',
+            font: { size: 14 }
+          },
+          ticks: { color: '#ddd' }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Time (seconds)',
+            color: '#fff',
+            font: { size: 14 }
+          },
+          ticks: { color: '#aaa' }
+        }
+      },
+      plugins: {
+        legend: { labels: { color: '#ddd' } }
+      }
+    }
+  });
+}
+
+function updateColorBox(r,g,b){
+  const hex = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`.toUpperCase();
+  const box = document.getElementById('colorBox');
+  box.style.backgroundColor = `rgb(${r},${g},${b})`;
+  document.getElementById('colorHex').textContent = hex;
+  const brightness = (r*299+g*587+b*114)/1000;
+  box.style.color = brightness > 125 ? '#000' : '#fff';
+}
+
+function addData(r,g,b){
+  elapsedSeconds += 2; // เพิ่มทีละ 2 วินาที
+  chart.data.labels.push(elapsedSeconds);
+
+  chart.data.datasets[0].data.push(r);
+  chart.data.datasets[1].data.push(g);
+  chart.data.datasets[2].data.push(b);
+  const yellow = Math.min(Math.round((r+g)/2),255);
+  chart.data.datasets[3].data.push(yellow);
+
+  if(chart.data.labels.length > 30){
+    chart.data.labels.shift();
+    chart.data.datasets.forEach(ds => ds.data.shift());
+  }
+
+  updateColorBox(r,g,b);
+  chart.update('none');
+}
+
+function resetData(){
+  elapsedSeconds = 0;
+  chart.data.labels = [];
+  chart.data.datasets.forEach(ds => ds.data = []);
+  updateColorBox(0,0,0);
+  chart.update('none');
+}
+
+setupChart();
+
+// รับข้อมูลแบบ Real-Time ผ่าน Server-Sent Events (SSE)
+const evtSource = new EventSource("/events");
+evtSource.onmessage = event => {
+  console.log("SSE received:", event.data);
+  const data = JSON.parse(event.data);
+  addData(data.r, data.g, data.b);
+};
+</script>
+</body>
+</html>  width: 95%;
   max-width: 1200px;
   height: 400px;
   background: #1b1b1b;
